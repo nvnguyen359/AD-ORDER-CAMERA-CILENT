@@ -1,0 +1,21 @@
+:host {
+    display: block;
+}
+
+.ad-login {
+    // Dùng biến CSS chuẩn của theme Aura
+    background: linear-gradient(135deg, var(--p-surface-0) 0%, var(--p-surface-100) 100%);
+}
+
+.surface-card {
+    background: var(--p-content-background);
+    // Border mỏng tinh tế của Aura
+    border: 1px solid var(--p-content-border-color);
+}
+
+.app-logo {
+    // Gradient text sử dụng màu chính của theme
+    background: linear-gradient(to right, var(--p-primary-500), var(--p-primary-700));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}

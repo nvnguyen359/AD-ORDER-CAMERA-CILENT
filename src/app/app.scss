@@ -1,0 +1,209 @@
+.app-root {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+
+  >main {
+    flex-grow: 1;
+    margin-top: var(--heght-top);
+  }
+}
+
+.app-root>.header {
+  position: fixed;
+  z-index: 500;
+  display: flex;
+  width: 100%;
+  top: 0;
+  left: 0;
+  height: var(--heght-top);
+
+  >.card {
+    width: 100%;
+
+    background-color: var(--primary-color);
+    display: flex;
+    align-items: center;
+
+    >p-menubar {
+      width: 100%;
+    }
+  }
+}
+
+footer {}
+
+
+.menu {
+  padding: 8px;
+  cursor: pointer;
+  margin-left: 8px;
+}
+
+
+/* --- PHẦN THÊM MỚI (Dán vào cuối file app.scss) --- */
+
+/* Biến màu sắc & kích thước (nếu chưa có) */
+:host {
+  --primary-color: #3B82F6;
+  --bottom-nav-height: 60px;
+  --header-height: var(--heght-top, 50px);
+  /* Lấy từ biến cũ của bạn hoặc default 50px */
+}
+
+/* 1. Dải ngang 4px */
+.top-accent-bar {
+  height: 4px;
+  background: linear-gradient(90deg, var(--primary-color), #8B5CF6);
+  width: 100%;
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 1001;
+  /* Cao hơn header */
+}
+
+/* 2. Style cho Mobile Bottom Nav (Mặc định ẩn) */
+.mobile-bottom-nav {
+  display: none;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: var(--bottom-nav-height);
+  background: #ffffff;
+  border-top: 1px solid #e5e7eb;
+  z-index: 1000;
+  justify-content: space-around;
+  align-items: center;
+  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
+
+  .nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-decoration: none;
+    color: #6b7280;
+    font-size: 0.75rem;
+    gap: 4px;
+
+    i {
+      font-size: 1.2rem;
+    }
+
+    &.active-link {
+      color: var(--primary-color);
+      font-weight: bold;
+    }
+  }
+}
+
+/* 3. Style cho nội dung trong Drawer (Thay thế p-tieredmenu) */
+.drawer-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+
+  li {
+    margin-bottom: 0.5rem;
+  }
+
+  .drawer-link {
+    display: flex;
+    align-items: center;
+    padding: 10px 1rem;
+    color: #374151;
+    text-decoration: none;
+    border-radius: 8px;
+    transition: background 0.2s;
+    gap: 12px;
+
+    i {
+      font-size: 1.1rem;
+    }
+
+    &:hover {
+      background-color: #f3f4f6;
+    }
+
+    &.active-link {
+      background-color: #eff6ff;
+      color: var(--primary-color);
+    }
+  }
+}
+
+/* --- LOGIC RESPONSIVE --- */
+
+/* Màn hình Mobile (<= 768px) */
+@media (max-width: 768px) {
+
+  /* Ẩn Header Desktop */
+  .desktop-only {
+    display: none !important;
+  }
+
+  /* Hiện Bottom Nav */
+  .mobile-bottom-nav {
+    display: flex;
+  }
+
+  /* Đẩy nội dung lên để không bị Bottom Nav che & tránh đè dải 4px */
+  .app-root>main {
+    margin-top: 4px;
+    /* Chỉ cách dải 4px, vì Header đã ẩn */
+    padding-bottom: calc(var(--bottom-nav-height) + 10px);
+  }
+}
+
+/* Màn hình Desktop (> 768px) */
+@media (min-width: 769px) {
+
+  /* Đẩy Header xuống 4px để nhường chỗ cho Top Bar */
+  .app-root>.header {
+    top: 4px !important;
+  }
+
+  /* Đẩy Main Content xuống tương ứng */
+  .app-root>main {
+    margin-top: calc(var(--heght-top) + 4px) !important;
+  }
+}
+
+/* Thêm vào app.scss */
+
+.global-progress-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  z-index: 2000;
+  /* Cao hơn cả Header và Drawer */
+}
+
+.global-loader-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 10000; // Rất cao để đè lên BlockUI
+
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+
+    pointer-events: none; // Để click xuyên qua phần trống (nếu cần)
+
+    // Các phần tử con (nút bấm, spinner) phải nhận sự kiện chuột
+    > * {
+        pointer-events: auto;
+    }
+}
+:host {
+    display: block;
+    height: 100%;
+    /* Test xong nhớ xóa */
+}

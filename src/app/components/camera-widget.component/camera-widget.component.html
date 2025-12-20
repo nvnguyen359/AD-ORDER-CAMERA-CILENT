@@ -1,0 +1,48 @@
+<div class="cam-card" [class.recording]="isRecording()">
+  <div class="cam-header">
+    <div class="title">
+      <strong>📸 Cam {{ cameraId }}</strong>
+      <span *ngIf="isRecording()" class="badge-rec">REC</span>
+    </div>
+
+    <div class="controls">
+      <select (change)="changeMode($event)">
+        <option value="normal">Normal</option>
+        <option value="scan">🟦 QR Scan</option>
+        <option value="security">🟥 Security</option>
+        <option value="both">🟪 All (AI+QR)</option>
+      </select>
+
+      <button class="btn-icon" title="Toàn màn hình" (click)="toggleFullscreen()">
+        ⛶
+      </button>
+
+      <button *ngIf="isConnected(); else btnConnect"
+              class="btn-icon danger" title="Tắt Camera" (click)="disconnect()">
+        ⛔
+      </button>
+      <ng-template #btnConnect>
+        <button class="btn-icon success" title="Bật Camera" (click)="connect()">
+          ▶
+        </button>
+      </ng-template>
+    </div>
+  </div>
+
+  <div class="viewport" #viewport>
+    <img *ngIf="imageBase64()"
+         [src]="imageBase64()"
+         (load)="onImageLoad($event)"
+         alt="Live Stream">
+
+    <div *ngIf="!imageBase64()" class="placeholder">
+        <p>Signal Lost / Disconnected</p>
+    </div>
+
+    <canvas appVisualizer
+            [metadata]="metadata()"
+            [imgWidth]="imgWidth"
+            [imgHeight]="imgHeight">
+    </canvas>
+  </div>
+</div>

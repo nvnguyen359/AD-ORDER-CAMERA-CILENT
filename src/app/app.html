@@ -1,0 +1,44 @@
+<div class="app">
+  <div class="top-accent-bar"></div>
+
+<header class="header-desktop">
+  <div class="container">
+    <p-button
+      icon="pi pi-bars"
+      (click)="visible = true"
+      text="true"
+      severity="secondary"
+      styleClass="hamburger-btn">
+    </p-button>
+    <span class="logo-text">MyApp</span>
+  </div>
+</header>
+
+<p-drawer [(visible)]="visible" header="Menu" >
+    <div class="drawer-content">
+        <ul class="drawer-list">
+            <li *ngFor="let item of menuItems">
+                <a [routerLink]="item.routerLink" class="drawer-link" (click)="visible = false">
+                    <i [class]="item.icon"></i>
+                    <span>{{ item.label }}</span>
+                </a>
+            </li>
+        </ul>
+    </div>
+</p-drawer>
+
+<main class="main-content">
+  <router-outlet></router-outlet>
+</main>
+
+<nav class="mobile-bottom-nav">
+  <a *ngFor="let item of menuItems"
+     [routerLink]="item.routerLink"
+     routerLinkActive="active"
+     class="nav-item">
+    <i [class]="item.icon"></i>
+    <span class="nav-label">{{ item.label }}</span>
+  </a>
+</nav>
+</div>
+<p-toast key="global" position="top-right" [baseZIndex]="99999"></p-toast>
