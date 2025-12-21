@@ -65,7 +65,6 @@ confirmPassword: any;
         if (data.access_token !='') {
           this.shareService.changeMessage({ isShow: false });
           this.router.navigate(['/monitor']);
-          this.authService.isAuthenticated.set(false);
         }
       });
     } catch {}

@@ -6,28 +6,28 @@ import { MessageService } from 'primeng/api';
 import { providePrimeNG } from 'primeng/config';
 import Aura from '@primeuix/themes/aura';
 
-// Import file routes và interceptors của bạn
 import { routes } from './app.routes';
 import { loadingInterceptor } from './core/interceptors/loading.interceptor';
 import { errorInterceptor } from './core/interceptors/error.interceptor';
+// 👇 1. Import AuthInterceptor vừa tạo
+import { authInterceptor } from './core/interceptors/auth.interceptor';
 
 export const appConfig: ApplicationConfig = {
   providers: [
-    // 1. Router
     provideRouter(routes),
-
-    // 2. Animations (CHỈ DÙNG 1 CÁI - Khuyên dùng Async cho nhanh)
     provideAnimationsAsync(),
 
-    // 3. HttpClient (QUAN TRỌNG: Gộp hết vào 1 dòng này)
+    // 👇 2. Đăng ký authInterceptor vào đây
+    // Thứ tự rất quan trọng: Auth -> Loading -> Error
     provideHttpClient(
-        withInterceptors([loadingInterceptor, errorInterceptor])
+        withInterceptors([
+            authInterceptor,    // Gắn Token trước
+            loadingInterceptor, // Sau đó bật loading
+            errorInterceptor    // Cuối cùng bắt lỗi
+        ])
     ),
 
-    // 4. Global Services (Để MessageService ở đây là đúng rồi)
     MessageService,
-
-    // 5. Cấu hình PrimeNG
     providePrimeNG({
         theme: {
             preset: Aura,

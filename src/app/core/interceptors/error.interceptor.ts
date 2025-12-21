@@ -29,7 +29,7 @@ export const errorInterceptor: HttpInterceptorFn = (req, next) => {
 
           // Logic Logout: Xóa token và đá về login
           localStorage.clear(); // Hoặc gọi authService.logout()
-          router.navigate(['/auth/login']);
+          router.navigate(['/']);
           break;
 
         case 403:

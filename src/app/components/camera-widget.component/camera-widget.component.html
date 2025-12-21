@@ -3,9 +3,11 @@
     <div class="title">
       <strong>📸 Cam {{ cameraId }}</strong>
 
-      <span *ngIf="isRecording()" class="badge-rec">
-        REC {{ currentOrder()?.code ? ': ' + currentOrder()!.code : '' }}
-      </span>
+      @if (isRecording()) {
+        <span class="badge-rec">
+          REC {{ currentOrder()?.code ? ': ' + currentOrder()?.code : '' }}
+        </span>
+      }
     </div>
 
     <div class="controls">
@@ -20,27 +22,35 @@
         ⛶
       </button>
 
-      <button *ngIf="isConnected(); else btnConnect"
-              class="btn-icon danger" title="Tắt Camera" (click)="disconnect()">
-        ⛔
-      </button>
-      <ng-template #btnConnect>
+      @if (isStreaming()) {
+        <button class="btn-icon danger" title="Tắt Camera" (click)="disconnect()">
+          ⛔
+        </button>
+      } @else {
         <button class="btn-icon success" title="Bật Camera" (click)="connect()">
           ▶
         </button>
-      </ng-template>
+      }
     </div>
   </div>
 
   <div class="viewport" #viewport>
-    <img *ngIf="imageBase64()"
-         [src]="imageBase64()"
-         (load)="onImageLoad($event)"
-         alt="Live Stream">
 
-    <div *ngIf="!imageBase64()" class="placeholder">
-        <p>Signal Lost / Disconnected</p>
-    </div>
+    @if (imageBase64()) {
+      <img [src]="imageBase64()"
+           (load)="onImageLoad($event)"
+           alt="Live Stream">
+    }
+
+    @if (!imageBase64()) {
+      <div class="placeholder">
+        @if (!isStreaming()) {
+            <p>Camera đang tắt</p>
+        } @else {
+            <p>Đang kết nối tín hiệu...</p>
+        }
+      </div>
+    }
 
     <canvas appVisualizer
             [metadata]="metadata()"
@@ -48,23 +58,32 @@
             [imgHeight]="imgHeight">
     </canvas>
 
-    <div class="order-overlay" *ngIf="currentOrder()">
+    @if (currentOrder(); as order) {
+      <div class="order-overlay">
         <div class="info-row">
-            <span class="label">Mã vận đơn:</span>
-            <span class="value code">{{ currentOrder()!.code }}</span>
+          <span class="label">Mã vận đơn:</span>
+          <span class="value code">{{ order.code }}</span>
         </div>
+
         <div class="info-row">
-            <span class="label">Nhân viên:</span>
-            <span class="value">{{ currentOrder()!.staffName || 'Unknown' }}</span>
+          <span class="label">Nhân viên:</span>
+          <span class="value">{{ order.staffName || 'Unknown' }}</span>
         </div>
-        <div class="info-row" *ngIf="currentOrder()!.note">
+
+        @if (order.note) {
+          <div class="info-row">
             <span class="label">Ghi chú:</span>
-            <span class="value warning">{{ currentOrder()!.note }}</span>
-        </div>
-        <div class="time-row">
-             🕒 Bắt đầu: {{ currentOrder()!.startTime | date:'HH:mm:ss dd/MM' }}
-        </div>
-    </div>
+            <span class="value warning">{{ order.note }}</span>
+          </div>
+        }
+
+        @if (order.startTime) {
+          <div class="time-row">
+             🕒 Bắt đầu: {{ order.startTime | date:'HH:mm:ss dd/MM' }}
+          </div>
+        }
+      </div>
+    }
 
   </div>
 </div>
