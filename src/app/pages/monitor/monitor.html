@@ -1,17 +1,31 @@
-
 <div class="dashboard-container">
-      <div class="controls-bar">
-        <h2>🛡️ Smart Surveillance System</h2>
-        <div class="actions">
-           <span class="status">System Active</span>
-           </div>
-      </div>
+  <div class="controls-bar">
+    <h2>🛡️ Smart Surveillance</h2>
 
-      <div class="camera-grid">
+    <div class="mobile-selector" *ngIf="isMobile()">
+      <label>📷 Chọn Cam:</label>
+      <select [value]="selectedCamId()" (change)="onCameraChange($event)">
         @for (cam of cameras(); track cam.id) {
-          <app-camera-widget [cameraId]="cam.id" [cameraName]="cam.name"></app-camera-widget>
-        } @empty {
-          <p>Loading cameras or No camera found...</p>
+          <option [value]="cam.id">{{ cam.name }}</option>
         }
-      </div>
+      </select>
     </div>
+
+    <div class="actions">
+      <span class="status-badge">● System Active</span>
+    </div>
+  </div>
+
+  <div class="camera-grid">
+    @for (cam of visibleCameras(); track cam.id) {
+      <app-camera-widget
+        [cameraId]="cam.id"
+        [cameraName]="cam.name">
+      </app-camera-widget>
+    } @empty {
+      <div class="empty-state">
+        <p>Đang tải camera hoặc không có dữ liệu...</p>
+      </div>
+    }
+  </div>
+</div>

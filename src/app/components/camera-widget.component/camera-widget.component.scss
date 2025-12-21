@@ -76,3 +76,51 @@
         align-items: center;
     }
 }
+/* Thêm vào cuối file scss hiện tại */
+
+.order-overlay {
+    position: absolute;
+    top: 10px;
+    right: 10px; /* Hiện góc phải trên của video */
+    background: rgba(0, 0, 0, 0.75);
+    backdrop-filter: blur(4px);
+    padding: 10px;
+    border-radius: 8px;
+    border-left: 4px solid var(--danger); /* Viền đỏ bên trái */
+    color: white;
+    font-size: 0.85rem;
+    z-index: 20; /* Đè lên canvas */
+    box-shadow: 0 2px 10px rgba(0,0,0,0.5);
+    max-width: 200px;
+    animation: slideIn 0.3s ease-out;
+
+    .info-row {
+        margin-bottom: 4px;
+        display: flex;
+        flex-direction: column;
+
+        .label { color: #aaa; font-size: 0.75rem; }
+        .value { font-weight: 600; }
+
+        .value.code {
+            color: var(--warning);
+            font-size: 1rem;
+            font-family: monospace;
+        }
+        .value.warning { color: #ffcc00; }
+    }
+
+    .time-row {
+        margin-top: 8px;
+        padding-top: 4px;
+        border-top: 1px solid rgba(255,255,255,0.2);
+        font-size: 0.75rem;
+        color: #ccc;
+        text-align: right;
+    }
+}
+
+@keyframes slideIn {
+    from { opacity: 0; transform: translateX(20px); }
+    to { opacity: 1; transform: translateX(0); }
+}

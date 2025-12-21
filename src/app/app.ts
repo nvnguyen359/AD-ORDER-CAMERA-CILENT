@@ -47,7 +47,10 @@ export class App {
     private messageService: MessageService // Nó sẽ tự lấy từ Root (AppConfig)
   ) {
     // Logic check auth nên để trong Guard (CanActivate) sẽ tốt hơn constructor
+     console.log(authService.isAuthenticated())
     if(!authService.isAuthenticated()){
+
+
       // router.navigate(['/monitor'])
     }
   }

@@ -7,7 +7,7 @@ import { MessageService } from 'primeng/api';
 import { environment } from '../../environments/environment';
 import { StorageService } from './storage.service';
 import { LoginResponse } from '../models/auth.model';
-import { Severity } from '../enums';
+import { ToastSeverity } from '../enums';
 
 const ACCESS_TOKEN_KEY = environment.ACCESS_TOKEN_KEY;
 
@@ -48,7 +48,7 @@ export class AuthService {
         // Loading tự tắt do Interceptor.
         // Lỗi tự hiện do ErrorInterceptor.
         if (response.code === 200) {
-           this.showToast('success', 'Thành công', `Tạo tài khoản ${response.full_name} thành công!`);
+           this.showToast(ToastSeverity.SUCCESS, 'Thành công', `Tạo tài khoản ${response.full_name} thành công!`);
         }
       })
     );
@@ -69,10 +69,10 @@ export class AuthService {
         this.isAuthenticated.set(true);
 
         // 3. Hiện thông báo (Thêm key: 'global' nếu app.html có set key)
-        this.showToast('success', 'Đăng nhập thành công', `Xin chào ${form.username}`);
+        this.showToast(ToastSeverity.SUCCESS, 'Đăng nhập thành công', `Xin chào ${form.username}`);
 
       }),catchError((error) => {
-           this.showToast(Severity.ERROR, 'Đăng nhập thất bại!', `Xin chào ${form.username}`);
+           this.showToast(ToastSeverity.ERROR, 'Đăng nhập thất bại!', `Xin chào ${form.username}`);
         return throwError(() => error);
       })
 

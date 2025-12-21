@@ -2,7 +2,10 @@
   <div class="cam-header">
     <div class="title">
       <strong>📸 Cam {{ cameraId }}</strong>
-      <span *ngIf="isRecording()" class="badge-rec">REC</span>
+
+      <span *ngIf="isRecording()" class="badge-rec">
+        REC {{ currentOrder()?.code ? ': ' + currentOrder()!.code : '' }}
+      </span>
     </div>
 
     <div class="controls">
@@ -44,5 +47,24 @@
             [imgWidth]="imgWidth"
             [imgHeight]="imgHeight">
     </canvas>
+
+    <div class="order-overlay" *ngIf="currentOrder()">
+        <div class="info-row">
+            <span class="label">Mã vận đơn:</span>
+            <span class="value code">{{ currentOrder()!.code }}</span>
+        </div>
+        <div class="info-row">
+            <span class="label">Nhân viên:</span>
+            <span class="value">{{ currentOrder()!.staffName || 'Unknown' }}</span>
+        </div>
+        <div class="info-row" *ngIf="currentOrder()!.note">
+            <span class="label">Ghi chú:</span>
+            <span class="value warning">{{ currentOrder()!.note }}</span>
+        </div>
+        <div class="time-row">
+             🕒 Bắt đầu: {{ currentOrder()!.startTime | date:'HH:mm:ss dd/MM' }}
+        </div>
+    </div>
+
   </div>
 </div>
