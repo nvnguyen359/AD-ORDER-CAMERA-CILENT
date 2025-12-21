@@ -25,7 +25,6 @@ export class CameraWidgetComponent implements OnInit, OnDestroy {
   // --- SIGNALS (STATE MANAGEMENT) ---
 
   // 1. isStreaming: True = Đang hiển thị video. False = Đang ẩn video.
-  // (Thay thế cho isConnected cũ để đúng nghĩa hơn)
   isStreaming = signal<boolean>(false);
 
   // 2. isRecording: True = Server báo đang có đơn (hiện viền đỏ/Badge REC).
@@ -48,14 +47,13 @@ export class CameraWidgetComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     // 1. KẾT NỐI SOCKET NGAY LẬP TỨC
-    // Luôn duy trì kết nối này để nhận tin nhắn ORDER_CREATED/ORDER_STOPPED
-    // Kể cả khi user không xem video (isStreaming = false), socket vẫn phải sống.
+    // Khi F5 xong, dòng này chạy -> Server bắn 'ORDER_CREATED' (Sync) về -> handleMessage hứng -> Hiện lại thông tin
     this.sub = this.streamService.getCameraStream(this.cameraId).subscribe({
       next: (msg: StreamMessage) => this.handleMessage(msg),
       error: (err) => console.error(`Cam ${this.cameraId} socket error:`, err)
     });
 
-    // 2. Mặc định vào là bật xem luôn (hoặc tắt tùy bạn)
+    // 2. Mặc định vào là bật xem luôn
     this.connect();
   }
 
@@ -65,20 +63,22 @@ export class CameraWidgetComponent implements OnInit, OnDestroy {
 
   // --- XỬ LÝ SOCKET ---
 
-private handleMessage(msg: StreamMessage) {
-    // 1. Nếu là Ảnh -> Chỉ xử lý, KHÔNG LOG (để đỡ rác console)
+  private handleMessage(msg: StreamMessage) {
+    // 1. Nếu là Ảnh
     if (msg.image) {
         if (this.isStreaming()) {
             this.imageBase64.set(`data:image/jpeg;base64,${msg.image}`);
             this.metadata.set(msg.metadata || []);
         }
-        return; // <--- Return ngay, không chạy xuống dưới để log
+        return;
     }
 
-    // 2. Nếu là Sự kiện (Event) -> LOG MÀU ĐỂ DỄ THẤY
+    // 2. Nếu là Sự kiện (Event)
     if (msg.event) {
         console.log(`%c🔥 SOCKET EVENT: ${msg.event}`, 'background: #222; color: #bada55', msg.data);
 
+        // ✅ ĐÂY LÀ CHỖ XỬ LÝ F5 SYNC:
+        // Server gửi 'ORDER_CREATED' kèm data cũ -> Code này chạy -> UI cập nhật lại như chưa từng mất kết nối
         if (msg.event === 'ORDER_CREATED') {
             this.isRecording.set(true);
             if (msg.data) this.currentOrder.set(msg.data);
@@ -91,7 +91,6 @@ private handleMessage(msg: StreamMessage) {
              // ... logic update
         }
     } else {
-        // Log những gói tin lạ (không phải ảnh, không phải event)
         console.warn('Gói tin không xác định:', msg);
     }
   }
@@ -100,11 +99,8 @@ private handleMessage(msg: StreamMessage) {
 
   // Nút "XEM LIVE" (Play)
   connect() {
-    // 1. Bật hiển thị Client ngay lập tức
     this.isStreaming.set(true);
-
-    // 2. Gọi API báo Server (Soft Connect)
-    // Server sẽ update trạng thái 'Online' trong DB
+    // Soft Connect: Server biết user đang xem
     this.streamService.toggleCamera(this.cameraId, 'connect').subscribe({
         error: (err) => console.error(`Cam ${this.cameraId} connect failed`, err)
     });
@@ -112,27 +108,19 @@ private handleMessage(msg: StreamMessage) {
 
   // Nút "TẮT LIVE" (Stop)
   disconnect() {
-    // 1. Tắt hiển thị Client ngay lập tức
     this.isStreaming.set(false);
-
-    // 2. Dọn dẹp bộ nhớ hiển thị
     this.imageBase64.set('');
     this.metadata.set([]);
 
-    // 3. Gọi API báo Server (Soft Disconnect)
-    // Server sẽ log lại là user ngừng xem, NHƯNG KHÔNG TẮT AI
+    // Soft Disconnect: Server biết user ngừng xem, nhưng AI vẫn chạy ngầm
     this.streamService.toggleCamera(this.cameraId, 'disconnect').subscribe({
         next: () => console.log(`Cam ${this.cameraId}: View stopped (AI still running)`),
         error: (err) => console.error(`Cam ${this.cameraId} disconnect failed`, err)
     });
-
-    // LƯU Ý QUAN TRỌNG: Không reset currentOrder/isRecording
-    // vì đơn hàng vẫn đang chạy ngầm, thẻ vẫn cần hiện thông tin!
   }
 
   changeMode(event: Event) {
     const mode = (event.target as HTMLSelectElement).value;
-    // API đổi thuật toán AI thì vẫn gọi về server bình thường
     this.streamService.changeMode(this.cameraId, mode);
   }
 
