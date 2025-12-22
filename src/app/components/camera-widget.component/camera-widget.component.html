@@ -1,88 +1,109 @@
 <div class="cam-card" [class.recording]="isRecording()">
-  <div class="cam-header">
-    <div class="title">
-      <strong>📸 Cam {{ cameraId }}</strong>
 
-      @if (isRecording()) {
-        <span class="badge-rec">
-          REC {{ currentOrder()?.code ? ': ' + currentOrder()?.code : '' }}
-        </span>
-      }
+  <div class="cam-header">
+    <div class="header-left">
+      <strong>📸 Cam {{ cameraId }}</strong>
     </div>
 
-    <div class="controls">
-      <select (change)="changeMode($event)">
+    <div class="header-right">
+      @if (isRecording()) {
+        <span class="badge-rec">● REC</span>
+      }
+
+      <select (change)="changeMode($event)" class="mode-select">
         <option value="normal">Normal</option>
         <option value="scan">🟦 QR Scan</option>
         <option value="security">🟥 Security</option>
-        <option value="both">🟪 All (AI+QR)</option>
+        <option value="both">🟪 All</option>
       </select>
 
-      <button class="btn-icon" title="Toàn màn hình" (click)="toggleFullscreen()">
+      <button class="btn-icon" (click)="toggleFullscreen()" title="Toàn màn hình">
         ⛶
       </button>
-
-      @if (isStreaming()) {
-        <button class="btn-icon danger" title="Tắt Camera" (click)="disconnect()">
-          ⛔
-        </button>
-      } @else {
-        <button class="btn-icon success" title="Bật Camera" (click)="connect()">
-          ▶
-        </button>
-      }
     </div>
   </div>
 
   <div class="viewport" #viewport>
 
-    @if (imageBase64()) {
-      <img [src]="imageBase64()"
-           (load)="onImageLoad($event)"
-           alt="Live Stream">
+    @if (isFullscreen()) {
+      <button class="exit-fullscreen-btn" (click)="toggleFullscreen()">
+        ❌ Thu nhỏ
+      </button>
     }
 
-    @if (!imageBase64()) {
+    @if (imageBase64()) {
+      <img [src]="imageBase64()" (load)="onImageLoad($event)" alt="Live">
+    } @else {
       <div class="placeholder">
-        @if (!isStreaming()) {
-            <p>Camera đang tắt</p>
+        @if (isStreaming()) {
+            <p>Đang tải...</p>
         } @else {
-            <p>Đang kết nối tín hiệu...</p>
+            <i class="pi pi-camera" style="font-size: 3rem; color: #444;"></i>
         }
       </div>
     }
 
-    <canvas appVisualizer
+<canvas appVisualizer
+            [width]="imgWidth()"
+            [height]="imgHeight()"
             [metadata]="metadata()"
-            [imgWidth]="imgWidth"
-            [imgHeight]="imgHeight">
-    </canvas>
+            [imgWidth]="imgWidth()"
+            [imgHeight]="imgHeight()"
+            [mode]="currentMode()"> </canvas>
+    <div class="center-controls" (click)="toggleStream()">
+        @if (!isStreaming()) {
+            <button class="yt-play-btn ghost-mode">
+                <i class="pi pi-play" style="font-size: 2.5rem; margin-left: 6px;"></i>
+            </button>
+        } @else {
+            <button class="yt-pause-btn">
+                <i class="pi pi-pause" style="font-size: 2rem;"></i>
+            </button>
+        }
+    </div>
 
     @if (currentOrder(); as order) {
-      <div class="order-overlay">
-        <div class="info-row">
-          <span class="label">Mã vận đơn:</span>
-          <span class="value code">{{ order.code }}</span>
-        </div>
 
-        <div class="info-row">
-          <span class="label">Nhân viên:</span>
-          <span class="value">{{ order.staffName || 'Unknown' }}</span>
-        </div>
-
-        @if (order.note) {
-          <div class="info-row">
-            <span class="label">Ghi chú:</span>
-            <span class="value warning">{{ order.note }}</span>
-          </div>
+        @if (!isStreaming()) {
+            <div class="offline-info-card" (click)="toggleStream()">
+                <div class="card-header">
+                    <span class="status-dot"></span> Đang xử lý
+                </div>
+                <div class="card-body">
+                    <div class="row code">{{ order.code }}</div>
+                    <div class="row note-group">
+                        <span class="status-label">{{ order.status || 'Processing' }}</span>
+                        @if (displayNote()) {
+                             <span class="divider">•</span>
+                             <span class="note-text">{{ displayNote() }}</span>
+                        }
+                    </div>
+                    <div class="row time">⏱ {{ elapsedMinutes() }} phút trước</div>
+                </div>
+            </div>
         }
 
-        @if (order.startTime) {
-          <div class="time-row">
-             🕒 Bắt đầu: {{ order.startTime | date:'HH:mm:ss dd/MM' }}
-          </div>
+        @if (isStreaming()) {
+            @if (!showOnlineInfo()) {
+                <button class="restore-info-btn" (click)="showOnlineInfo.set(true)" title="Hiện thông tin">
+                    ℹ️
+                </button>
+            }
+
+            @if (showOnlineInfo()) {
+                <div class="online-info-stack">
+                    <button class="close-stack-btn" (click)="showOnlineInfo.set(false)">×</button>
+                    <div class="stack-code">{{ order.code }}</div>
+                    <div class="stack-meta">
+                        <span class="meta-status">{{ order.status || 'Processing' }}</span>
+                        <span class="meta-time">⏱ {{ elapsedMinutes() }}m</span>
+                    </div>
+                    @if (displayNote()) {
+                        <div class="stack-note">{{ displayNote() }}</div>
+                    }
+                </div>
+            }
         }
-      </div>
     }
 
   </div>

@@ -1,127 +1,163 @@
+/* --- CONTAINER --- */
 .cam-card {
-    background: #000;
-    border: 2px solid #444;
+    background: #111;
+    border: 1px solid #333;
     border-radius: 8px;
     overflow: hidden;
     position: relative;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.5);
+    box-shadow: 0 4px 6px rgba(0,0,0,0.3);
     transition: all 0.3s ease;
 
-    // Hiệu ứng khi đang quay (Order Created)
     &.recording {
-        border-color: #e74c3c;
-        box-shadow: 0 0 15px rgba(231, 76, 60, 0.6);
+        border-color: #2ecc71;
+        box-shadow: 0 0 8px rgba(46, 204, 113, 0.3);
     }
 }
 
+/* --- HEADER --- */
 .cam-header {
-    background: #333;
-    padding: 10px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+    background: #1f1f1f;
+    padding: 6px 12px;
+    display: flex; justify-content: space-between; align-items: center;
+    color: #eee; font-size: 0.9rem; border-bottom: 1px solid #333;
+    z-index: 200; position: relative;
 
-    select {
-        background: #555;
-        color: white;
-        border: none;
-        padding: 5px;
-        border-radius: 4px;
-        margin-right: 5px;
+    .header-left { font-weight: 600; }
+    .header-right { display: flex; align-items: center; gap: 10px; }
+
+    .badge-rec {
+        color: #2ecc71; font-size: 0.75rem; font-weight: bold;
+        animation: blink 2s infinite ease-in-out;
+        text-shadow: 0 0 5px rgba(46, 204, 113, 0.5);
+    }
+
+    .mode-select {
+        background: #333; color: #ddd; border: 1px solid #444;
+        border-radius: 4px; padding: 2px 5px; font-size: 0.8rem; outline: none;
+    }
+
+    .btn-icon {
+        background: transparent; border: none; color: #aaa; cursor: pointer;
+        font-size: 1rem; padding: 0 5px; transition: color 0.2s;
+        &:hover { color: #fff; }
     }
 }
+@keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
 
-.badge-rec {
-    background: #e74c3c;
-    color: white;
-    font-size: 0.7rem;
-    padding: 2px 6px;
-    border-radius: 4px;
-    margin-left: 5px;
-    animation: blink 1s infinite;
-}
-
-@keyframes blink { 50% { opacity: 0.5; } }
-
-// VIEWPORT: Quan trọng để giữ Canvas đè lên Ảnh chuẩn
+/* --- VIEWPORT --- */
 .viewport {
     position: relative;
-    width: 100%;
-    padding-top: 56.25%; /* 16:9 Aspect Ratio */
-    background: #111;
+    width: 100%; aspect-ratio: 16/9;
+    background: #000; overflow: hidden;
 
-    img, canvas, .placeholder {
-        position: absolute;
-        top: 0; left: 0;
-        width: 100%; height: 100%;
-        object-fit: contain;
+    /* Image: Z-Index 10 */
+    img, .placeholder {
+        position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: contain;
+        z-index: 10;
     }
 
-    canvas { pointer-events: none; z-index: 10; }
+    /* Canvas: Z-Index 15 (Cao hơn Image) */
+    canvas {
+        position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: contain;
+        pointer-events: none;
+        z-index: 15;
+    }
 
     .placeholder {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        color: #666;
+        display: flex; justify-content: center; align-items: center; background: #0a0a0a;
     }
 
-    // Fullscreen styles
     &:fullscreen {
-        background: black;
-        width: 100vw; height: 100vh;
-        padding-top: 0;
-        display: flex;
-        justify-content: center;
-        align-items: center;
+        background: black; display: flex; justify-content: center; align-items: center;
+        img { object-fit: contain; }
     }
 }
-/* Thêm vào cuối file scss hiện tại */
 
-.order-overlay {
-    position: absolute;
-    top: 10px;
-    right: 10px; /* Hiện góc phải trên của video */
-    background: rgba(0, 0, 0, 0.075);
-    backdrop-filter: blur(4px);
-    padding: 10px;
-    border-radius: 8px;
-    border-left: 4px solid var(--danger); /* Viền đỏ bên trái */
-    color: white;
-    font-size: 0.85rem;
-    z-index: 20; /* Đè lên canvas */
-    box-shadow: 0 2px 10px rgba(0,0,0,0.5);
-    max-width: 200px;
-    animation: slideIn 0.3s ease-out;
-    z-index: 1000;
+/* --- CONTROLS (Z-Index 20) --- */
+.center-controls {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    z-index: 20;
+    display: flex; justify-content: center; align-items: center;
+    cursor: pointer;
 
-    .info-row {
-        margin-bottom: 4px;
-        display: flex;
-        flex-direction: column;
+    .yt-play-btn.ghost-mode {
+        width: 80px; height: 80px; border-radius: 50%;
+        background: rgba(255, 255, 255, 0.02);
+        border: 2px solid rgba(255, 255, 255, 0.05);
+        color: rgba(255, 255, 255, 0.15);
+        display: flex; justify-content: center; align-items: center;
+        transition: all 0.3s ease; backdrop-filter: blur(0px);
 
-        .label { color: #aaa; font-size: 0.75rem; }
-        .value { font-weight: 600; }
-
-        .value.code {
-            color: var(--warning);
-            font-size: 1rem;
-            font-family: monospace;
+        &:hover {
+            background: rgba(46, 204, 113, 0.9); border-color: #2ecc71; color: white;
+            transform: scale(1.1); backdrop-filter: blur(4px);
+            box-shadow: 0 0 15px rgba(46, 204, 113, 0.4);
         }
-        .value.warning { color: #ffcc00; }
     }
 
-    .time-row {
-        margin-top: 8px;
-        padding-top: 4px;
-        border-top: 1px solid rgba(255,255,255,0.2);
-        font-size: 0.75rem;
-        color: #ccc;
-        text-align: right;
+    .yt-pause-btn {
+        width: 60px; height: 60px; border-radius: 50%;
+        background: rgba(0,0,0,0.4); color: white; border: none;
+        opacity: 0; transform: scale(0.8); transition: all 0.2s; pointer-events: none;
+    }
+
+    &:hover .yt-pause-btn { opacity: 1; transform: scale(1); pointer-events: auto; }
+}
+
+/* --- FULLSCREEN EXIT BTN (Z-Index 100) --- */
+.exit-fullscreen-btn {
+    position: absolute; top: 20px; right: 20px; z-index: 100;
+    background: rgba(0, 0, 0, 0.6); color: #fff;
+    border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 6px;
+    padding: 8px 16px; font-size: 0.9rem; font-weight: 600; cursor: pointer;
+    backdrop-filter: blur(4px); transition: all 0.2s ease;
+    &:hover { background: rgba(231, 76, 60, 0.9); border-color: #e74c3c; transform: scale(1.05); }
+}
+
+/* --- OFFLINE INFO (Z-Index 25) --- */
+.offline-info-card {
+    position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    z-index: 25;
+    background: rgba(10, 10, 10, 0.95);
+    border: 1px solid #444; border-top: 3px solid #2ecc71;
+    border-radius: 8px; padding: 20px 30px; min-width: 260px;
+    text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+    cursor: pointer; transition: transform 0.2s;
+    &:hover { transform: translate(-50%, -50%) scale(1.02); border-color: #666; }
+    .card-header {
+        color: #888; font-size: 0.75rem; margin-bottom: 10px; text-transform: uppercase;
+        display: flex; align-items: center; justify-content: center; gap: 6px;
+        .status-dot { width: 6px; height: 6px; background: #2ecc71; border-radius: 50%; }
+    }
+    .card-body {
+        .code { color: #fff; font-weight: 800; font-size: 1.5rem; margin-bottom: 8px; font-family: monospace; }
+        .note-group { font-size: 0.9rem; margin-bottom: 8px; color: #ccc; .status-label { color: #bbb; } .note-text { color: #f1c40f; font-weight: 500; } }
+        .time { color: #555; font-size: 0.8rem; font-style: italic; }
     }
 }
 
-@keyframes slideIn {
-    from { opacity: 0; transform: translateX(20px); }
-    to { opacity: 1; transform: translateX(0); }
+/* --- ONLINE INFO (Z-Index 30) --- */
+.online-info-stack {
+    position: absolute; bottom: 15px; right: 15px;
+    display: flex; flex-direction: column; align-items: flex-end;
+    background: rgba(0, 0, 0, 0.65); border-radius: 8px; padding: 10px 15px;
+    z-index: 30; border-right: 4px solid #2ecc71;
+    animation: slideInRight 0.3s ease-out; backdrop-filter: blur(2px);
+
+    .stack-code { color: #fff; font-size: 1.2rem; font-weight: 800; font-family: monospace; margin-bottom: 4px; }
+    .stack-meta { font-size: 0.85rem; margin-bottom: 4px; display: flex; gap: 8px; align-items: center; .meta-status { color: #ddd; } .meta-time { color: #2ecc71; font-weight: bold; background: rgba(46, 204, 113, 0.1); padding: 1px 6px; border-radius: 4px; } }
+    .stack-note { color: #f1c40f; font-size: 0.85rem; max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-style: italic; }
+    .close-stack-btn { position: absolute; top: -8px; left: -8px; width: 20px; height: 20px; background: #333; color: #fff; border: 1px solid #555; border-radius: 50%; cursor: pointer; display: none; align-items: center; justify-content: center; }
+    &:hover { background: rgba(0, 0, 0, 0.85); .close-stack-btn { display: flex; } }
 }
+
+.restore-info-btn {
+    position: absolute; bottom: 15px; right: 15px;
+    width: 32px; height: 32px; border-radius: 50%;
+    background: rgba(0,0,0,0.6); border: 1px solid #444;
+    color: #ccc; cursor: pointer; z-index: 25;
+    display: flex; align-items: center; justify-content: center;
+    &:hover { background: #2ecc71; color: white; border-color: #2ecc71; }
+}
+
+@keyframes slideInRight { from { transform: translateX(20px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }

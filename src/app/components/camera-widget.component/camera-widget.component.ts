@@ -1,9 +1,19 @@
-import { Component, Input, OnInit, OnDestroy, signal, inject, ViewChild, ElementRef } from '@angular/core';
+import {
+  Component,
+  Input,
+  OnInit,
+  OnDestroy,
+  signal,
+  inject,
+  ViewChild,
+  ElementRef,
+  computed,
+  ChangeDetectionStrategy,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Subscription } from 'rxjs';
+import { Subscription, interval } from 'rxjs';
 import { StreamService, StreamMessage } from '../../core/services/stream.service';
 import { VisualizerDirective } from '../../features/live-cameras/visualizer.directive';
-// Import Model OrderInfo
 import { OrderInfo } from '../../core/models/monitor-camera.model';
 
 @Component({
@@ -11,124 +21,155 @@ import { OrderInfo } from '../../core/models/monitor-camera.model';
   standalone: true,
   imports: [CommonModule, VisualizerDirective],
   templateUrl: './camera-widget.component.html',
-  styleUrls: ['./camera-widget.component.scss']
+  styleUrls: ['./camera-widget.component.scss'],
+  // [FIX] Bật OnPush để tối ưu render và tránh lỗi check cycle
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class CameraWidgetComponent implements OnInit, OnDestroy {
-  // --- INPUTS ---
   @Input({ required: true }) cameraId!: number;
   @Input() cameraName: string = 'Camera';
 
-  // --- INJECTIONS ---
   private streamService = inject(StreamService);
   private sub: Subscription | null = null;
+  private timerSub: Subscription | null = null;
 
-  // --- SIGNALS (STATE MANAGEMENT) ---
-
-  // 1. isStreaming: True = Đang hiển thị video. False = Đang ẩn video.
+  // --- STATES ---
   isStreaming = signal<boolean>(false);
-
-  // 2. isRecording: True = Server báo đang có đơn (hiện viền đỏ/Badge REC).
   isRecording = signal<boolean>(false);
+  currentOrder = signal<any | null>(null);
 
-  // 3. Thông tin đơn hàng hiện tại
-  currentOrder = signal<OrderInfo | null>(null);
-
-  // 4. Dữ liệu Stream
+  // Data Stream
   imageBase64 = signal<string>('');
-  metadata = signal<any[]>([]);
+  metadata = signal<any[]>([]); // Dữ liệu AI vẽ khung
 
-  // Kích thước thật của ảnh (dùng để đồng bộ Canvas AI)
-  imgWidth = 0;
-  imgHeight = 0;
+  // Kích thước ảnh (Chuyển sang Signal)
+  imgWidth = signal<number>(1280);
+  imgHeight = signal<number>(720);
 
+  // UX States
+  isFullscreen = signal<boolean>(false);
+  showOnlineInfo = signal<boolean>(true);
+  elapsedMinutes = signal<number>(0);
+  currentMode = signal<string>('normal');
   @ViewChild('viewport') viewportRef!: ElementRef;
 
-  // --- LIFECYCLE HOOKS ---
+  // Cắt chuỗi Note
+  displayNote = computed(() => {
+    const order = this.currentOrder();
+    if (!order || !order.note) return '';
+    return order.note.split('{')[0].trim();
+  });
+
+  private onFullscreenChange = () => {
+    this.isFullscreen.set(!!document.fullscreenElement);
+  };
 
   ngOnInit(): void {
-    // 1. KẾT NỐI SOCKET NGAY LẬP TỨC
-    // Khi F5 xong, dòng này chạy -> Server bắn 'ORDER_CREATED' (Sync) về -> handleMessage hứng -> Hiện lại thông tin
+    // 1. Socket
     this.sub = this.streamService.getCameraStream(this.cameraId).subscribe({
       next: (msg: StreamMessage) => this.handleMessage(msg),
-      error: (err) => console.error(`Cam ${this.cameraId} socket error:`, err)
+      error: (err) => console.error(`Cam ${this.cameraId} socket error:`, err),
     });
 
-    // 2. Mặc định vào là bật xem luôn
+    // 2. Timer
+    this.timerSub = interval(5000).subscribe(() => this.updateElapsedTime());
+
+    // 3. Fullscreen Listener
+    document.addEventListener('fullscreenchange', this.onFullscreenChange);
+
     this.connect();
   }
 
   ngOnDestroy(): void {
     this.sub?.unsubscribe();
+    this.timerSub?.unsubscribe();
+    document.removeEventListener('fullscreenchange', this.onFullscreenChange);
   }
-
-  // --- XỬ LÝ SOCKET ---
 
   private handleMessage(msg: StreamMessage) {
-    // 1. Nếu là Ảnh
+    // Xử lý Ảnh & Metadata
     if (msg.image) {
-        if (this.isStreaming()) {
-            this.imageBase64.set(`data:image/jpeg;base64,${msg.image}`);
-            this.metadata.set(msg.metadata || []);
-        }
-        return;
+      if (this.isStreaming()) {
+        this.imageBase64.set(`data:image/jpeg;base64,${msg.image}`);
+
+        // Cập nhật metadata (Quan trọng)
+        const meta = msg.metadata && Array.isArray(msg.metadata) ? msg.metadata : [];
+        this.metadata.set(meta);
+      }
+      return;
     }
 
-    // 2. Nếu là Sự kiện (Event)
+    // Xử lý Sự kiện
     if (msg.event) {
-        console.log(`%c🔥 SOCKET EVENT: ${msg.event}`, 'background: #222; color: #bada55', msg.data);
-
-        // ✅ ĐÂY LÀ CHỖ XỬ LÝ F5 SYNC:
-        // Server gửi 'ORDER_CREATED' kèm data cũ -> Code này chạy -> UI cập nhật lại như chưa từng mất kết nối
-        if (msg.event === 'ORDER_CREATED') {
-            this.isRecording.set(true);
-            if (msg.data) this.currentOrder.set(msg.data);
+      if (msg.event === 'ORDER_CREATED') {
+        this.isRecording.set(true);
+        if (msg.data) {
+          this.currentOrder.set(msg.data);
+          this.updateElapsedTime();
+          this.showOnlineInfo.set(true);
         }
-        else if (msg.event === 'ORDER_STOPPED') {
-            this.isRecording.set(false);
-            this.currentOrder.set(null);
-        }
-        else if (msg.event === 'ORDER_UPDATED') {
-             // ... logic update
-        }
-    } else {
-        console.warn('Gói tin không xác định:', msg);
+      } else if (msg.event === 'ORDER_STOPPED') {
+        this.isRecording.set(false);
+        this.currentOrder.set(null);
+        this.elapsedMinutes.set(0);
+      }
     }
   }
 
-  // --- USER ACTIONS ---
+  private updateElapsedTime() {
+    const order = this.currentOrder();
+    if (order) {
+      // Check các trường thời gian có thể có
+      const timeStr = order.start_at || order.start_time || order.startTime;
+      if (timeStr) {
+        const start = new Date(timeStr).getTime();
+        const now = Date.now();
+        const diffMins = Math.max(0, Math.floor((now - start) / 60000));
+        this.elapsedMinutes.set(diffMins);
+      }
+    } else {
+      this.elapsedMinutes.set(0);
+    }
+  }
 
-  // Nút "XEM LIVE" (Play)
+  toggleStream() {
+    if (this.isStreaming()) this.disconnect();
+    else this.connect();
+  }
+
   connect() {
     this.isStreaming.set(true);
-    // Soft Connect: Server biết user đang xem
-    this.streamService.toggleCamera(this.cameraId, 'connect').subscribe({
-        error: (err) => console.error(`Cam ${this.cameraId} connect failed`, err)
-    });
+    this.streamService.toggleCamera(this.cameraId, 'connect').subscribe();
   }
 
-  // Nút "TẮT LIVE" (Stop)
   disconnect() {
     this.isStreaming.set(false);
     this.imageBase64.set('');
     this.metadata.set([]);
-
-    // Soft Disconnect: Server biết user ngừng xem, nhưng AI vẫn chạy ngầm
-    this.streamService.toggleCamera(this.cameraId, 'disconnect').subscribe({
-        next: () => console.log(`Cam ${this.cameraId}: View stopped (AI still running)`),
-        error: (err) => console.error(`Cam ${this.cameraId} disconnect failed`, err)
-    });
+    this.streamService.toggleCamera(this.cameraId, 'disconnect').subscribe();
   }
 
   changeMode(event: Event) {
-    const mode = (event.target as HTMLSelectElement).value;
-    this.streamService.changeMode(this.cameraId, mode);
+    const target = event.target as HTMLSelectElement;
+    if (target) {
+      // 1. Cập nhật UI Frontend ngay lập tức
+      this.currentMode.set(target.value);
+
+      // 2. Gửi lệnh xuống Backend (để xử lý logic server nếu cần)
+      this.streamService.changeMode(this.cameraId, target.value);
+    }
   }
 
   onImageLoad(event: Event) {
     const img = event.target as HTMLImageElement;
-    if (this.imgWidth !== img.naturalWidth || this.imgHeight !== img.naturalHeight) {
-        this.imgWidth = img.naturalWidth;
-        this.imgHeight = img.naturalHeight;
+    // Kiểm tra xem kích thước có thực sự thay đổi không
+    if (this.imgWidth() !== img.naturalWidth || this.imgHeight() !== img.naturalHeight) {
+      // [FIX] Bọc trong setTimeout để đẩy việc cập nhật sang tick tiếp theo
+      // Khắc phục lỗi NG0100: ExpressionChangedAfterItHasBeenCheckedError
+      setTimeout(() => {
+        this.imgWidth.set(img.naturalWidth);
+        this.imgHeight.set(img.naturalHeight);
+      }, 0);
     }
   }
 
