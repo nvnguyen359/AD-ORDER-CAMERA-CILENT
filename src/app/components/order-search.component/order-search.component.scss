@@ -1,0 +1,39 @@
+/* Responsive Utilities */
+@media screen and (max-width: 576px) {
+  .sm\:hidden { display: block !important; }
+  .sm\:flex { display: none !important; }
+}
+
+@media screen and (min-width: 577px) {
+  .sm\:hidden { display: none !important; }
+  .sm\:flex { display: flex !important; }
+}
+
+/* AutoComplete Customization */
+:host ::ng-deep {
+  .p-autocomplete {
+    flex: 1; /* Chiếm hết chiều rộng */
+  }
+
+  .p-autocomplete-input {
+    width: 100%;
+  }
+
+  .p-datepicker-trigger {
+    background-color: transparent;
+    color: var(--text-color-secondary);
+    border-color: var(--surface-border);
+  }
+}
+
+/* --- HIGHLIGHT STYLES --- */
+// Class này sẽ được apply vào trong innerHTML của AutoComplete item
+.highlight-match {
+  font-weight: 700 !important;   /* In đậm phần tìm thấy */
+  color: var(--primary-color) !important; /* Màu chủ đạo */
+}
+
+/* Override font-weight mảnh (300) nếu class PrimeFlex chưa có */
+.font-light {
+  font-weight: 300 !important;
+}

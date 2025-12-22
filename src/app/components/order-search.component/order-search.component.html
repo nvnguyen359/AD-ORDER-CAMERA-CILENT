@@ -1,0 +1,103 @@
+<p-toolbar styleClass="mb-4 border-none shadow-1 p-3 surface-card border-round">
+  <div class="p-toolbar-group-start flex flex-column w-full gap-3">
+
+    <div class="w-full flex align-items-center gap-2">
+      <p-inputGroup class="flex-1">
+        <p-inputGroupAddon>
+          <i class="pi pi-search"></i>
+        </p-inputGroupAddon>
+
+        <p-autoComplete
+          [(ngModel)]="selectedCode"
+          [suggestions]="suggestions()"
+          (completeMethod)="searchOrders($event)"
+          (onSelect)="onOrderSelect($event)"
+          field="code"
+          dataKey="code"
+          placeholder="Nhập mã đơn, SĐT..."
+          [delay]="400"
+          [showClear]="false"
+          styleClass="w-full"
+          inputStyleClass="w-full">
+
+          <ng-template let-order pTemplate="item">
+            <div class="flex align-items-center gap-2">
+
+              <div class="relative w-2rem h-2rem border-circle overflow-hidden flex align-items-center justify-content-center bg-gray-100 border-1 border-300">
+                @if (order.path_avatar) {
+                  <img [src]="getFullUrl(order.path_avatar)" class="w-full h-full object-cover" alt="avatar"/>
+                } @else {
+                  <i class="pi pi-box text-500"></i>
+                }
+              </div>
+
+              <div class="flex flex-column">
+                <span class="font-light text-900"
+                      [innerHTML]="highlightText(order.code)">
+                </span>
+
+                @if (order.packer_name) {
+                  <span class="text-xs font-light text-500"
+                        [innerHTML]="highlightText(order.packer_name)">
+                  </span>
+                }
+              </div>
+            </div>
+          </ng-template>
+
+          <ng-template pTemplate="empty">
+            <div class="p-2 text-center text-500 text-sm font-light">Không tìm thấy đơn hàng</div>
+          </ng-template>
+        </p-autoComplete>
+
+        @if (selectedCode) {
+          <button pButton type="button"
+                  icon="pi pi-times"
+                  class="p-button-secondary"
+                  (click)="onClearSearch()"
+                  pTooltip="Xóa tìm kiếm"
+                  tooltipPosition="bottom">
+          </button>
+        }
+
+        <button pButton icon="pi pi-qrcode"
+                (click)="openQrScanner.emit()"
+                pTooltip="Quét mã"
+                tooltipPosition="bottom"
+                class="p-button-outlined p-button-secondary">
+        </button>
+      </p-inputGroup>
+
+      <button pButton icon="pi pi-filter"
+              class="p-button-text sm:hidden"
+              (click)="mobileMenu.toggle($event)"></button>
+    </div>
+
+    <div class="hidden sm:flex align-items-center gap-2 flex-wrap">
+      <span class="text-500 mr-2 text-sm"><i class="pi pi-filter mr-1"></i>Thời gian:</span>
+
+      @for (p of presets; track p.value) {
+        <p-chip [label]="p.label"
+                [styleClass]="activePreset() === p.value ? 'bg-primary text-white cursor-pointer text-sm' : 'cursor-pointer hover:surface-200 transition-colors text-sm'"
+                (click)="selectPreset(p.value)">
+        </p-chip>
+      }
+
+      <span class="mx-2 text-300">|</span>
+
+      <p-datepicker
+        [(ngModel)]="rangeDates"
+        selectionMode="range"
+        [readonlyInput]="true"
+        placeholder="Tùy chọn ngày..."
+        [showIcon]="true"
+        (onSelect)="onCustomDateSelect()"
+        inputStyleClass="text-sm"
+        [style]="{'width':'240px'}">
+      </p-datepicker>
+    </div>
+
+  </div>
+</p-toolbar>
+
+<p-menu #mobileMenu [model]="menuItems()" [popup]="true"></p-menu>

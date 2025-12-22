@@ -14,6 +14,7 @@ import { MessageService } from 'primeng/api'; // Chỉ import Type, không provi
 import { menuItems } from './Menu';
 import { LoadingService } from './core/services/loading.service';
 import { AuthService } from './core/services/auth.service';
+import { OrderSearchComponent } from './components/order-search.component/order-search.component';
 
 @Component({
   selector: 'app-root',
@@ -29,7 +30,7 @@ import { AuthService } from './core/services/auth.service';
     ButtonModule,
     ProgressSpinnerModule,
     BlockUIModule,
-    ToastModule // Chỉ cần ToastModule là đủ
+    ToastModule , OrderSearchComponent
   ],
   templateUrl: './app.html',
   styleUrls: ['./app.scss'],
