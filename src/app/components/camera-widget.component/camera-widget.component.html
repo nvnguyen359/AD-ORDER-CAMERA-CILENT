@@ -9,7 +9,15 @@
       @if (isRecording()) {
         <span class="badge-rec">● REC</span>
       }
-
+<button class="btn-icon rec-btn"
+              (click)="toggleRecording()"
+              [title]="isRecording() ? 'Dừng ghi hình' : 'Ghi hình thủ công'">
+        <i class="pi"
+           [class.pi-circle-fill]="!isRecording()"
+           [class.pi-stop-circle]="isRecording()"
+           [style.color]="isRecording() ? '#e74c3c' : '#fff'">
+        </i>
+      </button>
       <select (change)="changeMode($event)" class="mode-select">
         <option value="normal">Normal</option>
         <option value="scan">🟦 QR Scan</option>

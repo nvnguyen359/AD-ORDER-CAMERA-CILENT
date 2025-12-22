@@ -35,13 +35,23 @@ export class StreamService {
     return this.http.get(`${environment.apiUrl}/cameras`);
   }
 
-  // 2. Gửi lệnh Connect/Disconnect
+  // 2. Gửi lệnh Connect/Disconnect (Socket Logic trên Server)
   toggleCamera(id: number, action: 'connect' | 'disconnect'): Observable<any> {
     const url = `${environment.apiUrl}/oc-cameras/${id}/${action}`;
     return this.http.post(url, {});
   }
 
-  // 3. Kết nối WebSocket
+  // [MỚI] 3. API Quay thủ công (Manual Start)
+  startRecording(id: number): Observable<any> {
+    return this.http.post(`${environment.apiUrl}/oc-cameras/${id}/manual-start`, {});
+  }
+
+  // [MỚI] 4. API Dừng quay thủ công (Manual Stop)
+  stopRecording(id: number): Observable<any> {
+    return this.http.post(`${environment.apiUrl}/oc-cameras/${id}/manual-stop`, {});
+  }
+
+  // 5. Kết nối WebSocket
   connectSocket(token: string): void {
     if (!isPlatformBrowser(this.platformId)) return;
     if (this.socket$ && !this.socket$.closed) return;
@@ -73,7 +83,7 @@ export class StreamService {
     });
   }
 
-  // 4. Lấy luồng dữ liệu riêng cho 1 Camera
+  // 6. Lấy luồng dữ liệu riêng cho 1 Camera
   getCameraStream(cameraId: number): Observable<StreamMessage> {
     return this.streamMessages$.pipe(
       filter((msg) => msg.camera_id === cameraId),
@@ -81,6 +91,7 @@ export class StreamService {
     );
   }
 
+  // 7. Đổi chế độ hiển thị (Client -> Server -> Client Broadcast)
   changeMode(camId: number, mode: string) {
     if (this.socket$) {
       this.socket$.next({ camera_id: camId, mode: mode } as any);

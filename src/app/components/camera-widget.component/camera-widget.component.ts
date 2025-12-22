@@ -15,7 +15,7 @@ import { Subscription, interval } from 'rxjs';
 import { StreamService, StreamMessage } from '../../core/services/stream.service';
 import { VisualizerDirective } from '../../features/live-cameras/visualizer.directive';
 import { OrderInfo } from '../../core/models/monitor-camera.model';
-
+import { MessageService } from 'primeng/api';
 @Component({
   selector: 'app-camera-widget',
   standalone: true,
@@ -30,6 +30,7 @@ export class CameraWidgetComponent implements OnInit, OnDestroy {
   @Input() cameraName: string = 'Camera';
 
   private streamService = inject(StreamService);
+  private messageService = inject(MessageService);
   private sub: Subscription | null = null;
   private timerSub: Subscription | null = null;
 
@@ -85,7 +86,47 @@ export class CameraWidgetComponent implements OnInit, OnDestroy {
     this.timerSub?.unsubscribe();
     document.removeEventListener('fullscreenchange', this.onFullscreenChange);
   }
-
+  toggleRecording() {
+    if (this.isRecording()) {
+      // Đang quay -> Gọi API Dừng
+      this.streamService.stopRecording(this.cameraId).subscribe({
+        next: (res: any) => {
+          this.messageService.add({
+            severity: 'success',
+            summary: 'Đã dừng quay',
+            detail: res.message,
+          });
+          // State isRecording sẽ tự động cập nhật về false khi nhận được socket event ORDER_STOPPED
+        },
+        error: (err) => {
+          this.messageService.add({
+            severity: 'error',
+            summary: 'Lỗi',
+            detail: err.error?.detail || 'Không thể dừng quay',
+          });
+        },
+      });
+    } else {
+      // Chưa quay -> Gọi API Bắt đầu
+      this.streamService.startRecording(this.cameraId).subscribe({
+        next: (res: any) => {
+          this.messageService.add({
+            severity: 'success',
+            summary: 'Bắt đầu quay',
+            detail: res.message,
+          });
+          // State isRecording sẽ tự động cập nhật về true khi nhận được socket event ORDER_CREATED
+        },
+        error: (err) => {
+          this.messageService.add({
+            severity: 'error',
+            summary: 'Lỗi',
+            detail: err.error?.detail || 'Không thể bắt đầu quay',
+          });
+        },
+      });
+    }
+  }
   private handleMessage(msg: StreamMessage) {
     // Xử lý Ảnh & Metadata
     if (msg.image) {
