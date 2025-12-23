@@ -1,4 +1,12 @@
-import { Component, EventEmitter, Output, inject, signal, computed, ViewEncapsulation } from '@angular/core';
+import {
+  Component,
+  EventEmitter,
+  Output,
+  inject,
+  signal,
+  computed,
+  ViewEncapsulation,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
@@ -7,7 +15,11 @@ import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { ToolbarModule } from 'primeng/toolbar';
 import { InputGroupModule } from 'primeng/inputgroup';
 import { InputGroupAddonModule } from 'primeng/inputgroupaddon';
-import { AutoCompleteModule, AutoCompleteCompleteEvent, AutoCompleteSelectEvent } from 'primeng/autocomplete';
+import {
+  AutoCompleteModule,
+  AutoCompleteCompleteEvent,
+  AutoCompleteSelectEvent,
+} from 'primeng/autocomplete';
 import { ButtonModule } from 'primeng/button';
 import { DatePickerModule } from 'primeng/datepicker';
 import { MenuModule } from 'primeng/menu';
@@ -19,13 +31,14 @@ import { MenuItem } from 'primeng/api';
 import { OrderService } from '../../core/services/order.service';
 import { Order } from '../../core/models/order.model';
 import { environment } from '../../environments/environment';
+import { QrScanDialogComponent } from '../qr-scan-dialog.component/qr-scan-dialog.component';
 
 export interface FilterState {
   code?: string;
   status?: string;
-  datePreset?: string;
-  startDate?: Date;
-  endDate?: Date;
+  date_preset?: string;
+  start_date?: Date;
+  end_date?: Date;
 }
 
 @Component({
@@ -42,11 +55,12 @@ export interface FilterState {
     DatePickerModule,
     MenuModule,
     ChipModule,
-    TooltipModule
+    TooltipModule,
+    QrScanDialogComponent,
   ],
   templateUrl: './order-search.component.html',
   styleUrls: ['./order-search.component.scss'],
-  encapsulation: ViewEncapsulation.None // Quan trọng: Để CSS highlight apply được vào innerHTML
+  encapsulation: ViewEncapsulation.None, // Quan trọng: Để CSS highlight apply được vào innerHTML
 })
 export class OrderSearchComponent {
   private orderService = inject(OrderService);
@@ -59,7 +73,8 @@ export class OrderSearchComponent {
   // --- SIGNALS & STATE ---
   suggestions = signal<Order[]>([]);
   activePreset = signal<string>('today');
-
+  // State điều khiển hiển thị Dialog
+  showQrDialog = false;
   // Lưu từ khóa để highlight
   searchKeyword = signal<string>('');
 
@@ -79,17 +94,17 @@ export class OrderSearchComponent {
   menuItems = computed<MenuItem[]>(() => {
     const active = this.activePreset();
     return [
-      ...this.presets.map(p => ({
+      ...this.presets.map((p) => ({
         label: p.label,
         icon: active === p.value ? 'pi pi-check text-primary' : 'pi pi-calendar',
-        command: () => this.selectPreset(p.value)
+        command: () => this.selectPreset(p.value),
       })),
       { separator: true },
       {
         label: 'Tùy chọn ngày',
         icon: active === 'custom' ? 'pi pi-check text-primary' : 'pi pi-calendar-plus',
-        disabled: true
-      }
+        disabled: true,
+      },
     ];
   });
 
@@ -104,10 +119,12 @@ export class OrderSearchComponent {
   // Hàm chuyển tiếng Việt có dấu -> không dấu
   removeAccents(str: string): string {
     if (!str) return '';
-    return str.normalize('NFD')
-              .replace(/[\u0300-\u036f]/g, '')
-              .replace(/đ/g, 'd').replace(/Đ/g, 'D')
-              .toLowerCase();
+    return str
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/đ/g, 'd')
+      .replace(/Đ/g, 'D')
+      .toLowerCase();
   }
 
   // Hàm tạo HTML highlight từ khóa
@@ -133,35 +150,37 @@ export class OrderSearchComponent {
 
     const normalizedQuery = this.removeAccents(query);
 
-    this.orderService.getOrders({
-      page: 0,
-      pageSize: 50, // Lấy rộng ra để lọc client-side
-      code: query
-    }).subscribe({
-      next: (res) => {
-        const rawData = res.data || [];
+    this.orderService
+      .getOrders({
+        page: 0,
+        pageSize: 50, // Lấy rộng ra để lọc client-side
+        code: query,
+      })
+      .subscribe({
+        next: (res) => {
+          const rawData = res.data || [];
 
-        // B1: Lọc trùng mã (Deduplicate)
-        let uniqueOrders = Array.from(
-          new Map(rawData.map(item => [item.code, item])).values()
-        );
+          // B1: Lọc trùng mã (Deduplicate)
+          let uniqueOrders = Array.from(new Map(rawData.map((item) => [item.code, item])).values());
 
-        // B2: Lọc Tiếng Việt không dấu (Client-side)
-        if (normalizedQuery) {
-          uniqueOrders = uniqueOrders.filter(order => {
-            const normalizedCode = this.removeAccents(order.code);
-            const normalizedPacker = this.removeAccents(order.packer_name || '');
+          // B2: Lọc Tiếng Việt không dấu (Client-side)
+          if (normalizedQuery) {
+            uniqueOrders = uniqueOrders.filter((order) => {
+              const normalizedCode = this.removeAccents(order.code);
+              const normalizedPacker = this.removeAccents(order.packer_name || '');
 
-            return normalizedCode.includes(normalizedQuery) ||
-                   normalizedPacker.includes(normalizedQuery);
-          });
-        }
+              return (
+                normalizedCode.includes(normalizedQuery) ||
+                normalizedPacker.includes(normalizedQuery)
+              );
+            });
+          }
 
-        // Cắt lấy 10 kết quả hiển thị
-        this.suggestions.set(uniqueOrders.slice(0, 10));
-      },
-      error: () => this.suggestions.set([])
-    });
+          // Cắt lấy 10 kết quả hiển thị
+          this.suggestions.set(uniqueOrders.slice(0, 10));
+        },
+        error: () => this.suggestions.set([]),
+      });
   }
 
   // ==========================================
@@ -191,6 +210,7 @@ export class OrderSearchComponent {
   // 3. LOGIC DATE FILTER
   // ==========================================
   selectPreset(value: string) {
+    console.log(value)
     this.activePreset.set(value);
     this.rangeDates = undefined;
     this.emitCurrentState();
@@ -208,7 +228,9 @@ export class OrderSearchComponent {
   // ==========================================
   getFullUrl(path?: string): string {
     if (!path) return '';
-    const baseUrl = environment.apiUrl.endsWith('/') ? environment.apiUrl.slice(0, -1) : environment.apiUrl;
+    const baseUrl = environment.apiUrl.endsWith('/')
+      ? environment.apiUrl.slice(0, -1)
+      : environment.apiUrl;
     const relativePath = path.startsWith('/') ? path : `/${path}`;
     return `${baseUrl}${relativePath}`;
   }
@@ -216,13 +238,13 @@ export class OrderSearchComponent {
   private emitCurrentState() {
     const code = this.selectedCode || undefined;
     const preset = this.activePreset();
-    let dateParams: any = { datePreset: preset };
+    let dateParams: any = { date_preset: preset };
 
     if (preset === 'custom' && this.rangeDates) {
       dateParams = {
-        datePreset: undefined,
-        startDate: this.rangeDates[0],
-        endDate: this.rangeDates[1] || this.rangeDates[0]
+        date_preset: undefined,
+        start_date: this.rangeDates[0],
+        end_date: this.rangeDates[1] || this.rangeDates[0],
       };
     }
     this.filterChange.emit({ code, ...dateParams });
@@ -232,12 +254,25 @@ export class OrderSearchComponent {
     const preset = this.activePreset();
     let dateParams: any = { datePreset: preset };
     if (preset === 'custom' && this.rangeDates) {
-       dateParams = {
-         datePreset: undefined,
-         startDate: this.rangeDates[0],
-         endDate: this.rangeDates[1] || this.rangeDates[0]
-       };
+      dateParams = {
+        date_preset: undefined,
+        start_date: this.rangeDates[0],
+        end_date: this.rangeDates[1] || this.rangeDates[0],
+      };
     }
     this.filterChange.emit({ ...dateParams, ...override });
+  }
+  // Hàm xử lý khi quét thành công
+  onQrScanSuccess(code: string) {
+    console.log('Quét thành công:', code);
+
+    // 1. Điền vào ô input
+    this.selectedCode = code;
+
+    // 2. Gọi hàm handleSelect để tìm kiếm ngay
+    this.handleSelect(code);
+
+    // Dialog tự đóng do logic bên trong QrScanDialogComponent
+    // hoặc bạn set this.showQrDialog = false ở đây cho chắc chắn.
   }
 }

@@ -15,7 +15,7 @@ export abstract class BaseService<T> {
    * Lấy danh sách có phân trang, filter, sort
    * @param params Object chứa page, pageSize, sort_by, filter...
    */
-  findAll(params?: any): Observable<any> {
+  findAll(params?: any, size?: number, sortField?: string | string[], sortOrder?: string): Observable<any> {
     const httpParams = this.createHttpParams(params);
     return this.http.get<any>(this.apiUrl, { params: httpParams });
   }

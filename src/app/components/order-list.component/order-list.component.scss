@@ -1,0 +1,19 @@
+:host ::ng-deep {
+  .p-datatable-rowgroup-header {
+    background: #f8fafc !important;
+    transition: all 0.2s;
+    &:hover {
+      background: #f1f5f9 !important;
+    }
+  }
+
+  .p-datatable-gridlines .p-datatable-thead > tr > th {
+    background: #334155;
+    color: white;
+  }
+
+  .p-tag {
+    min-width: 80px;
+    justify-content: center;
+  }
+}

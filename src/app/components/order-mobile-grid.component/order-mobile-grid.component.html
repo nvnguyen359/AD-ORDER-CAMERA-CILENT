@@ -1,0 +1,131 @@
+<div class="flex flex-column gap-3 pb-8"> <div class="sticky top-0 z-5 bg-white shadow-1 p-3 border-bottom-1 surface-border">
+    <p-iconfield iconPosition="left" class="w-full">
+      <p-inputicon class="pi pi-search text-gray-400" />
+      <input pInputText type="text"
+             [value]="searchValue()"
+             (input)="onSearch($event)"
+             placeholder="Tìm đơn / scan mã..."
+             class="w-full border-round-2xl surface-100 border-none px-3 py-2 text-900 focus:surface-0 focus:shadow-2 transition-all" />
+    </p-iconfield>
+  </div>
+
+  <div *ngIf="loading()" class="p-3 flex flex-column gap-3">
+    <div *ngFor="let _ of [1,2,3]" class="surface-card p-3 border-round-xl shadow-1">
+      <div class="flex justify-content-between mb-2">
+        <p-skeleton width="60%" height="1.5rem"></p-skeleton>
+        <p-skeleton width="20%" height="1.5rem"></p-skeleton>
+      </div>
+      <p-skeleton width="40%" height="1rem" styleClass="mb-2"></p-skeleton>
+      <p-skeleton width="100%" height="3rem"></p-skeleton>
+    </div>
+  </div>
+
+  <div *ngIf="!loading() && orderGroups().length === 0" class="flex flex-column align-items-center justify-content-center py-6 text-center opacity-60">
+    <i class="pi pi-box text-6xl mb-3"></i>
+    <span class="text-lg font-medium">Không có dữ liệu</span>
+  </div>
+
+  <div *ngIf="!loading()" class="px-3 flex flex-column gap-3">
+
+    <div *ngFor="let group of orderGroups()"
+         class="surface-card border-round-xl shadow-2 overflow-hidden bg-white transition-all active:shadow-1"
+         [class.border-blue-500]="group.isExpanded"
+         [class.border-left-3]="group.isExpanded">
+
+      <div class="p-3 relative cursor-pointer" (click)="toggleGroup(group)" pRipple>
+
+        <div class="flex justify-content-between align-items-start mb-2">
+          <div class="flex flex-column gap-1">
+             <span class="text-lg font-bold text-900 line-height-2 break-all pr-2">
+               {{ group.displayCode }}
+             </span>
+             <span class="text-xs text-500 flex align-items-center">
+               <i class="pi pi-clock text-xs mr-1"></i> {{ group.latestDate | date:'dd/MM HH:mm' }}
+             </span>
+          </div>
+          <p-tag [value]="group.latestStatus | orderStatus"
+                 [severity]="getSeverity(group.latestStatus)"
+                 styleClass="text-xs font-bold border-round-md"></p-tag>
+        </div>
+
+        <div class="flex align-items-center justify-content-between mt-3 p-2 surface-50 border-round-lg">
+
+          <div class="flex align-items-center gap-2">
+            <div class="w-2rem h-2rem border-circle overflow-hidden shadow-1 bg-white">
+               <img *ngIf="group.items[0].full_avatar_path" [src]="group.items[0].full_avatar_path" class="w-full h-full object-cover">
+               <div *ngIf="!group.items[0].full_avatar_path" class="w-full h-full flex align-items-center justify-content-center text-xs bg-gray-200">IMG</div>
+            </div>
+            <div class="text-xs font-semibold text-700">
+               {{ group.totalItems }} Phiên
+            </div>
+          </div>
+
+          <div class="flex align-items-center text-sm font-bold text-green-700">
+             <i class="pi pi-stopwatch mr-1"></i> {{ group.durationText }}
+             <i class="pi pi-chevron-down ml-2 transition-transform transition-duration-300 text-500"
+                [ngClass]="{'rotate-180': group.isExpanded}"></i>
+          </div>
+        </div>
+      </div>
+
+      <div *ngIf="group.isExpanded" class="bg-bluegray-50 border-top-1 surface-border p-2 fadein animation-duration-200">
+
+        <div class="flex flex-column gap-2">
+          <div *ngFor="let item of group.items; let i = index"
+               class="bg-white border-round-lg p-2 shadow-1 flex flex-column gap-2 border-1 surface-border">
+
+            <div class="flex justify-content-between align-items-center border-bottom-1 surface-border pb-1">
+               <span class="text-xs font-bold px-2 py-1 border-round"
+                     [ngClass]="item.parent_id ? 'bg-orange-100 text-orange-700' : 'bg-blue-100 text-blue-700'">
+                 {{ item.parent_id ? 'SUB #' + (i) : 'ROOT' }}
+               </span>
+               <span class="text-xs font-mono text-500">ID: {{ item.id }}</span>
+            </div>
+
+            <div class="flex justify-content-between align-items-center">
+              <div class="flex flex-column text-sm">
+                 <span class="text-600">Start: <b class="text-900">{{ item.start_at | appTimeFormat }}</b></span>
+                 <span class="text-600">End:
+                    <b *ngIf="item.closed_at" class="text-900">{{ item.closed_at | appTimeFormat }}</b>
+                    <b *ngIf="!item.closed_at" class="text-green-600">Running...</b>
+                 </span>
+              </div>
+              <div class="text-right">
+                <div class="font-bold text-green-700 text-sm">{{ item.duration }}</div>
+                <p-button *ngIf="item.path_video" icon="pi pi-play" [rounded]="true" [text]="true" size="small" severity="help"></p-button>
+              </div>
+            </div>
+
+            <div *ngIf="item.note" class="text-xs text-600 bg-yellow-50 p-1 border-round">
+              Note: {{ item.note }}
+            </div>
+          </div>
+        </div>
+
+        <div class="flex justify-content-center mt-2 pt-2">
+             <button pButton label="Xem Chi Tiết" icon="pi pi-arrow-right" class="p-button-outlined p-button-sm w-full"></button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="px-3">
+    <p-paginator
+        [first]="first()"
+        [rows]="rows()"
+        [totalRecords]="totalRecords()"
+        (onPageChange)="onPageChange($event)"
+        styleClass="bg-transparent border-none px-0"
+        [showCurrentPageReport]="false"
+        [showPageLinks]="false"
+        [showFirstLastIcon]="false">
+        <ng-template pTemplate="left">
+           <span class="text-sm text-500">Trang {{ (first() / rows()) + 1 }}</span>
+        </ng-template>
+        <ng-template pTemplate="right">
+           <span class="text-sm text-500">Tổng: {{ totalRecords() }}</span>
+        </ng-template>
+    </p-paginator>
+  </div>
+</div>

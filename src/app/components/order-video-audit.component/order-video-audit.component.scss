@@ -1,0 +1,97 @@
+/* Global Overrides cho Dialog Dark Theme */
+:host ::ng-deep .audit-dialog-dark {
+    .p-dialog-header {
+        background-color: #18181b !important; // Zinc-900
+        border-bottom: 1px solid #27272a;
+        color: #fff;
+        padding: 1rem;
+
+        @media (max-width: 768px) {
+            padding: 0.75rem;
+        }
+    }
+
+    .p-dialog-content {
+        padding: 0 !important;
+        background-color: #000;
+        height: 100%;
+    }
+
+    .p-dialog-header-icon {
+        color: #a1a1aa !important;
+        &:hover {
+            color: #fff !important;
+            background: #27272a !important;
+        }
+    }
+
+    // Mobile Fullscreen Override
+    @media (max-width: 960px) {
+        max-height: 100% !important;
+        height: 100% !important;
+        border-radius: 0 !important;
+        margin: 0 !important;
+
+        .p-dialog-content {
+            border-radius: 0 !important;
+        }
+    }
+}
+
+/* Custom Animation & Scrollbar */
+.custom-scrollbar {
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+
+    &::-webkit-scrollbar {
+        height: 6px;
+    }
+    &::-webkit-scrollbar-track {
+        background: #18181b;
+    }
+    &::-webkit-scrollbar-thumb {
+        background: #3f3f46;
+        border-radius: 10px;
+        &:hover {
+            background: #52525b;
+        }
+    }
+}
+
+.active-card {
+    background-color: #27272a !important; // Zinc-800
+    border: 2px solid #eab308 !important; // Yellow-500
+    transform: scale(1.02);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5);
+    z-index: 5;
+
+    .pi {
+        transform: scale(1.1);
+    }
+}
+
+/* Animation Pulse cho nút Pause */
+@keyframes pulse-yellow {
+    0% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.15); opacity: 0.8; }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+.animation-pulse {
+    animation: pulse-yellow 2s infinite ease-in-out;
+}
+
+/* Marker Styles */
+.custom-timeline-layer {
+    z-index: 20;
+    bottom: 40px; /* Điều chỉnh tránh thanh control video */
+}
+
+.marker-dot {
+    transform: translateX(-50%);
+    transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+
+    &:hover {
+        transform: translateX(-50%) scale(1.3);
+    }
+}

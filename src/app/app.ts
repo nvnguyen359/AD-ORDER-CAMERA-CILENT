@@ -30,7 +30,7 @@ import { OrderSearchComponent } from './components/order-search.component/order-
     ButtonModule,
     ProgressSpinnerModule,
     BlockUIModule,
-    ToastModule , OrderSearchComponent
+    ToastModule 
   ],
   templateUrl: './app.html',
   styleUrls: ['./app.scss'],

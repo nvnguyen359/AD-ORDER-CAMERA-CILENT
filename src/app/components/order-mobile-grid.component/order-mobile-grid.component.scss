@@ -1,0 +1,36 @@
+:host {
+    display: block;
+    background-color: #f8fafc; // Nền xám nhẹ
+    min-height: 100vh;
+}
+
+.rotate-180 {
+    transform: rotate(180deg);
+}
+
+// Tùy chỉnh Paginator cho mobile
+:host ::ng-deep {
+    .p-paginator {
+        justify-content: space-between;
+
+        .p-paginator-prev, .p-paginator-next {
+            background: #fff;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            border-radius: 50%;
+            width: 2.5rem;
+            height: 2.5rem;
+            color: var(--primary-color);
+        }
+    }
+
+    // Tùy chỉnh input search focus
+    .p-inputtext:focus {
+        box-shadow: 0 0 0 2px var(--primary-200);
+    }
+}
+
+// Animation nhấn vào card
+.active\:shadow-1:active {
+    transform: scale(0.98);
+    box-shadow: none !important;
+}

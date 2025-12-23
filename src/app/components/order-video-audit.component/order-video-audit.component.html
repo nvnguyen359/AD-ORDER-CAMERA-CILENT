@@ -1,0 +1,134 @@
+<p-dialog
+    [(visible)]="visible"
+    [modal]="true"
+    [maximizable]="true"
+    [draggable]="false"
+    [focusOnShow]="false"
+    [contentStyle]="{'padding': '0', 'overflow': 'hidden', 'background-color': '#000'}"
+    styleClass="audit-dialog-dark"
+    [breakpoints]="{'960px': '100vw'}"
+    [style]="{width: '90vw', height: '90vh', maxWidth: '1200px', maxHeight: '100%'}"
+    [baseZIndex]="10000">
+
+    <ng-template pTemplate="header">
+        <div class="flex flex-column justify-content-center w-full overflow-hidden">
+            <span class="font-bold text-lg text-white white-space-nowrap overflow-hidden text-overflow-ellipsis">
+                <i class="pi pi-video mr-2 text-yellow-500"></i>
+                <span class="hidden sm:inline">Audit Đơn:</span>
+                {{selectedAudit?.code || 'Loading...'}}
+            </span>
+        </div>
+    </ng-template>
+
+    <div class="audit-layout h-full flex flex-column bg-black-alpha-90">
+
+        <div class="video-container flex-grow-1 relative bg-black flex align-items-center justify-content-center overflow-hidden" style="min-height: 200px;">
+            <video #videoPlayer
+                   controls
+                   autoplay
+                   muted
+                   playsinline
+                   (play)="isPlaying = true"
+                   (pause)="isPlaying = false"
+                   (ended)="isPlaying = false"
+                   class="w-full h-full"
+                   style="object-fit: contain;">
+                <source [src]="selectedAudit?.path_video" type="video/mp4" *ngIf="selectedAudit?.path_video">
+                Your browser does not support HTML5 video.
+            </video>
+
+            <div *ngIf="showMarker"
+                 class="custom-timeline-layer absolute bottom-0 left-0 w-full mb-5 pb-2 px-3 pointer-events-none hidden sm:block">
+                 <div class="relative w-full h-1rem">
+                    <div class="marker-dot pointer-events-auto cursor-pointer absolute"
+                         [style.left.%]="markerPositionPercent"
+                         (click)="seekToMarker()"
+                         pTooltip="Check Packer Info"
+                         tooltipPosition="top">
+                        <div class="w-1rem h-1rem border-circle bg-yellow-500 shadow-4 border-2 border-white flex align-items-center justify-content-center overflow-hidden">
+                            <img *ngIf="selectedAudit?.path_avatar" [src]="selectedAudit?.path_avatar" class="w-full h-full object-cover">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="info-bar bg-gray-900 border-top-1 border-gray-800 text-white p-2 flex align-items-center justify-content-between flex-shrink-0" style="height: 50px;">
+            <div class="flex align-items-center gap-4 overflow-hidden" *ngIf="selectedAudit">
+                <div class="flex align-items-center text-yellow-500">
+                    <i class="pi pi-clock mr-2"></i>
+                    <span class="font-mono">{{ selectedAudit.created_at | date:'HH:mm:ss dd/MM' }}</span>
+                </div>
+
+                <div class="hidden sm:flex align-items-center border-left-1 border-gray-700 pl-3">
+                    <i class="pi pi-user mr-2 text-gray-400"></i>
+                    <span class="font-bold">{{ selectedAudit.packerName }}</span>
+                </div>
+
+                <div class="flex align-items-center border-left-1 border-gray-700 pl-3 overflow-hidden">
+                    <span class="white-space-nowrap text-gray-300 italic text-sm text-overflow-ellipsis" [title]="selectedAudit.note">
+                        {{ selectedAudit.note }}
+                    </span>
+                </div>
+            </div>
+
+            <div class="actions flex-shrink-0 flex gap-2">
+                <p-button
+                    label="Download Video"
+                    [icon]="isDownloading ? 'pi pi-spin pi-spinner' : 'pi pi-video'"
+                    (click)="downloadCurrentVideo()"
+                    [disabled]="isDownloading || isZipping || !selectedAudit?.path_video"
+                    styleClass="p-button-sm p-button-text text-gray-400 hidden sm:flex">
+                </p-button>
+
+                <p-button
+                    label="Download All Zip"
+                    [icon]="isZipping ? 'pi pi-spin pi-spinner' : 'pi pi-download'"
+                    (click)="downloadAllAsZip()"
+                    [disabled]="isZipping || isDownloading || auditList.length === 0"
+                    styleClass="p-button-sm p-button-outlined p-button-secondary text-white border-gray-600 hover:bg-gray-800">
+                </p-button>
+            </div>
+        </div>
+
+        <div class="list-container bg-gray-900 border-top-1 border-gray-800 p-2 flex-shrink-0" style="height: 130px;">
+            <div class="flex gap-2 h-full overflow-x-auto custom-scrollbar px-1 align-items-center">
+
+                <div *ngFor="let item of auditList"
+                     class="audit-card relative flex flex-column justify-content-between p-2 border-round-md cursor-pointer transition-all transition-duration-200"
+                     [ngClass]="{
+                        'active-card': selectedAudit?.id === item.id,
+                        'disabled-card opacity-50': !item.hasVideo,
+                        'bg-gray-800 hover:bg-gray-700': selectedAudit?.id !== item.id
+                     }"
+                     style="min-width: 110px; height: 100px; border: 1px solid #3f3f46;"
+                     (click)="selectAudit(item)">
+
+                    <div class="flex justify-content-between text-xs">
+                        <span class="text-gray-300 font-medium">{{ item.created_at | date:'HH:mm' }}</span>
+                        <span *ngIf="item.hasVideo" class="text-green-400 font-mono">{{ item.displayDuration }}</span>
+                    </div>
+
+                    <div class="flex align-items-center justify-content-center flex-grow-1">
+                        <i *ngIf="item.hasVideo && selectedAudit?.id !== item.id" class="pi pi-play text-2xl text-gray-500"></i>
+                        <ng-container *ngIf="item.hasVideo && selectedAudit?.id === item.id">
+                             <i *ngIf="isPlaying" class="pi pi-pause text-2xl text-yellow-500 animation-pulse"></i>
+                             <i *ngIf="!isPlaying" class="pi pi-play text-2xl text-yellow-500"></i>
+                        </ng-container>
+                        <i *ngIf="!item.hasVideo" class="pi pi-image text-2xl text-gray-600"></i>
+                    </div>
+
+                    <div class="text-center text-xs white-space-nowrap overflow-hidden text-overflow-ellipsis text-gray-400">
+                        {{ item.status | uppercase }}
+                    </div>
+
+                    <span class="absolute top-0 right-0 text-[10px] bg-black-alpha-50 text-gray-500 px-1 border-round-bottom-left-xs">
+                        #{{item.id}}
+                    </span>
+                </div>
+
+            </div>
+        </div>
+
+    </div>
+</p-dialog>

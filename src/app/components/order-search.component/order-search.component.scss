@@ -1,6 +1,6 @@
 /* Responsive Utilities */
 @media screen and (max-width: 576px) {
-  .sm\:hidden { display: block !important; }
+  .sm\:hidden { display: flex !important; }
   .sm\:flex { display: none !important; }
 }
 
@@ -36,4 +36,8 @@
 /* Override font-weight mảnh (300) nếu class PrimeFlex chưa có */
 .font-light {
   font-weight: 300 !important;
+}
+.input-search{
+  display: flex;
+  position: relative;
 }

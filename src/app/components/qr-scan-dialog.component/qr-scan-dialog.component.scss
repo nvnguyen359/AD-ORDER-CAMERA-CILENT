@@ -1,0 +1,92 @@
+:host ::ng-deep {
+  // Loại bỏ padding mặc định của Dialog content để Camera full màn hình
+  .qr-dialog-custom .p-dialog-content {
+    padding: 0 !important;
+    background: #000;
+  }
+}
+
+.scanner-container {
+  height: 400px; // Chiều cao cố định cho vùng quét
+  width: 100%;
+  position: relative;
+  background-color: #000;
+}
+
+// Lớp phủ Overlay
+.scan-overlay {
+  z-index: 10;
+}
+
+// Khung ngắm (Vùng sáng ở giữa)
+.viewfinder {
+  width: 250px;
+  height: 250px;
+  position: relative;
+
+  // Mẹo CSS: Tạo nền tối xung quanh box này bằng box-shadow cực lớn
+  box-shadow: 0 0 0 1000px rgba(0, 0, 0, 0.6);
+  border-radius: 4px;
+}
+
+// --- 4 GÓC XANH ---
+.corner {
+  position: absolute;
+  width: 30px;
+  height: 30px;
+  border-color: #00ff00; // Màu xanh lá hacker
+  border-style: solid;
+  border-width: 0;
+}
+
+.top-left {
+  top: -2px; left: -2px;
+  border-top-width: 4px;
+  border-left-width: 4px;
+}
+.top-right {
+  top: -2px; right: -2px;
+  border-top-width: 4px;
+  border-right-width: 4px;
+}
+.bottom-left {
+  bottom: -2px; left: -2px;
+  border-bottom-width: 4px;
+  border-left-width: 4px;
+}
+.bottom-right {
+  bottom: -2px; right: -2px;
+  border-bottom-width: 4px;
+  border-right-width: 4px;
+}
+
+// --- TIA LASER ĐỎ ---
+.laser-line {
+  position: absolute;
+  width: 100%;
+  height: 2px;
+  background: red;
+  box-shadow: 0 0 4px red;
+  top: 0;
+  left: 0;
+  opacity: 0.6;
+  animation: scan-animation 2s infinite linear;
+}
+
+// Animation chạy từ trên xuống
+@keyframes scan-animation {
+  0% {
+    top: 0%;
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 1;
+  }
+  100% {
+    top: 100%;
+    opacity: 0;
+  }
+}

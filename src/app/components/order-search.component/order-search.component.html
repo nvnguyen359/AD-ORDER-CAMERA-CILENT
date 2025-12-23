@@ -1,4 +1,4 @@
-<p-toolbar styleClass="mb-4 border-none shadow-1 p-3 surface-card border-round">
+<p-toolbar class=" border-none shadow-1  surface-card border-round">
   <div class="p-toolbar-group-start flex flex-column w-full gap-3">
 
     <div class="w-full flex align-items-center gap-2">
@@ -6,8 +6,7 @@
         <p-inputGroupAddon>
           <i class="pi pi-search"></i>
         </p-inputGroupAddon>
-
-        <p-autoComplete
+         <p-autoComplete
           [(ngModel)]="selectedCode"
           [suggestions]="suggestions()"
           (completeMethod)="searchOrders($event)"
@@ -15,7 +14,8 @@
           field="code"
           dataKey="code"
           placeholder="Nhập mã đơn, SĐT..."
-          [delay]="400"
+          [delay]="600"
+          
           [showClear]="false"
           styleClass="w-full"
           inputStyleClass="w-full">
@@ -59,7 +59,6 @@
                   tooltipPosition="bottom">
           </button>
         }
-
         <button pButton icon="pi pi-qrcode"
                 (click)="openQrScanner.emit()"
                 pTooltip="Quét mã"
@@ -101,3 +100,7 @@
 </p-toolbar>
 
 <p-menu #mobileMenu [model]="menuItems()" [popup]="true"></p-menu>
+<app-qr-scan-dialog
+    [(visible)]="showQrDialog"
+    (scanSuccess)="onQrScanSuccess($event)">
+</app-qr-scan-dialog>
