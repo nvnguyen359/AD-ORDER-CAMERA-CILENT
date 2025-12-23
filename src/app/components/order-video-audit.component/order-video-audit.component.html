@@ -1,5 +1,6 @@
 <p-dialog
-    [(visible)]="visible"
+    [visible]="visible"
+    (visibleChange)="onDialogVisibleChange($event)"
     [modal]="true"
     [maximizable]="true"
     [draggable]="false"
@@ -91,40 +92,59 @@
             </div>
         </div>
 
-        <div class="list-container bg-gray-900 border-top-1 border-gray-800 p-2 flex-shrink-0" style="height: 130px;">
+        <div class="list-container bg-gray-900 border-top-1 border-gray-800 p-2 flex-shrink-0" style="height: 130px;" *ngIf="showAuditList">
             <div class="flex gap-2 h-full overflow-x-auto custom-scrollbar px-1 align-items-center">
 
                 <div *ngFor="let item of auditList"
-                     class="audit-card relative flex flex-column justify-content-between p-2 border-round-md cursor-pointer transition-all transition-duration-200"
+                     class="audit-card relative border-round-md cursor-pointer transition-all overflow-hidden flex-shrink-0"
                      [ngClass]="{
                         'active-card': selectedAudit?.id === item.id,
-                        'disabled-card opacity-50': !item.hasVideo,
-                        'bg-gray-800 hover:bg-gray-700': selectedAudit?.id !== item.id
+                        'disabled-card': !item.hasVideo
                      }"
-                     style="min-width: 110px; height: 100px; border: 1px solid #3f3f46;"
+                     style="min-width: 140px; height: 100px; border: 1px solid #3f3f46;"
                      (click)="selectAudit(item)">
 
-                    <div class="flex justify-content-between text-xs">
-                        <span class="text-gray-300 font-medium">{{ item.created_at | date:'HH:mm' }}</span>
-                        <span *ngIf="item.hasVideo" class="text-green-400 font-mono">{{ item.displayDuration }}</span>
+                    <div class="absolute top-0 left-0 w-full h-full z-0">
+                        <img [src]="item.path_avatar"
+                             class="w-full h-full object-cover transition-transform transition-duration-500"
+                             [class.scale-110]="selectedAudit?.id === item.id"
+                             style="opacity: 0.6;"
+                             alt="thumb"
+                             onerror="this.src='assets/images/no-image.png'">
+
+                        <div class="absolute top-0 left-0 w-full h-full"
+                             style="background: linear-gradient(to bottom, rgba(0,0,0,0.3), rgba(0,0,0,0.8));">
+                        </div>
                     </div>
 
-                    <div class="flex align-items-center justify-content-center flex-grow-1">
-                        <i *ngIf="item.hasVideo && selectedAudit?.id !== item.id" class="pi pi-play text-2xl text-gray-500"></i>
-                        <ng-container *ngIf="item.hasVideo && selectedAudit?.id === item.id">
-                             <i *ngIf="isPlaying" class="pi pi-pause text-2xl text-yellow-500 animation-pulse"></i>
-                             <i *ngIf="!isPlaying" class="pi pi-play text-2xl text-yellow-500"></i>
-                        </ng-container>
-                        <i *ngIf="!item.hasVideo" class="pi pi-image text-2xl text-gray-600"></i>
+                    <div class="relative z-1 flex flex-column justify-content-between h-full p-2">
+
+                        <div class="flex justify-content-between text-xs text-white" style="text-shadow: 0 1px 2px black;">
+                            <span class="font-medium">{{ item.created_at | date:'HH:mm' }}</span>
+                            <span *ngIf="item.hasVideo" class="text-green-400 font-mono">{{ item.displayDuration }}</span>
+                        </div>
+
+                        <div class="flex align-items-center justify-content-center flex-grow-1" style="filter: drop-shadow(0 2px 4px rgba(0,0,0,0.8));">
+                            <i *ngIf="item.hasVideo && selectedAudit?.id !== item.id" class="pi pi-play text-3xl text-white opacity-90"></i>
+
+                            <ng-container *ngIf="item.hasVideo && selectedAudit?.id === item.id">
+                                 <i *ngIf="isPlaying" class="pi pi-pause text-3xl text-yellow-500 animation-pulse"></i>
+                                 <i *ngIf="!isPlaying" class="pi pi-play text-3xl text-yellow-500"></i>
+                            </ng-container>
+
+                            <i *ngIf="!item.hasVideo" class="pi pi-image text-3xl text-gray-500"></i>
+                        </div>
+
+                        <div class="text-center text-[8px] text-white  uppercase white-space-nowrap overflow-hidden text-overflow-ellipsis"
+                             style="text-shadow: 0 1px 2px black;font-style:300!important;font-size:10px">
+                            {{ item.status|orderStatus }}
+                        </div>
                     </div>
 
-                    <div class="text-center text-xs white-space-nowrap overflow-hidden text-overflow-ellipsis text-gray-400">
-                        {{ item.status | uppercase }}
-                    </div>
-
-                    <span class="absolute top-0 right-0 text-[10px] bg-black-alpha-50 text-gray-500 px-1 border-round-bottom-left-xs">
+                    <span class="absolute bottom-0 right-0 text-[9px] bg-yellow-600 text-white px-1 border-round-bottom-left-xs z-2" style="color: rgb(243, 238, 241) !important;;">
                         #{{item.id}}
                     </span>
+
                 </div>
 
             </div>

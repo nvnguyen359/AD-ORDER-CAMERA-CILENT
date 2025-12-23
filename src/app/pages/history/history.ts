@@ -7,12 +7,7 @@ import { OrderVideoAuditComponent } from '../../components/order-video-audit.com
 
 @Component({
   selector: 'app-history',
-  imports: [
-    OrderSearchComponent,
-    OrderListComponent,
-    OrderMobileGridComponent,
-    OrderVideoAuditComponent,
-  ],
+  imports: [OrderSearchComponent, OrderListComponent, OrderVideoAuditComponent],
   templateUrl: './history.html',
   styleUrl: './history.scss',
   standalone: true,
@@ -37,10 +32,12 @@ export class History {
     //    };
     //});
   }
-  eventPlayVideo(event: any=null) {
-    if(!Array.isArray(event.data)) return;
-    console.log(JSON.stringify(event))
-     this.isAuditDialogVisible = true;
-     this.auditConfig = event;
+  visibleChangeClosed(event: any) {
+    this.isAuditDialogVisible = event;
+  }
+  eventPlayVideo(event: any = null) {
+    if (!Array.isArray(event.data)) return;
+    this.isAuditDialogVisible = true;
+    this.auditConfig = event;
   }
 }
