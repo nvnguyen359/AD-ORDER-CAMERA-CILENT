@@ -2,12 +2,13 @@
   .p-datatable-rowgroup-header {
     background: #f8fafc !important;
     transition: all 0.2s;
+
     &:hover {
       background: #f1f5f9 !important;
     }
   }
 
-  .p-datatable-gridlines .p-datatable-thead > tr > th {
+  .p-datatable-gridlines .p-datatable-thead>tr>th {
     background: #334155;
     color: white;
   }
@@ -16,4 +17,13 @@
     min-width: 80px;
     justify-content: center;
   }
+}
+
+@media screen and (max-width: 600px) {
+  .order-list-search {
+    display: none !important;
+  }
+}
+.main-order-list{
+  padding-left: 10px!important;
 }

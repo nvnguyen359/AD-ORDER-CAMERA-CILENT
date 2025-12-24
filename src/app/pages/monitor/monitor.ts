@@ -1,15 +1,26 @@
 import { Component, inject, OnDestroy, OnInit, signal, computed, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms'; // Cần cho binding select
+
+// Services
 import { StorageService } from '../../core/services/storage.service';
 import { StreamService } from '../../core/services/stream.service';
 import { environment } from '../../environments/environment';
+
+// Components
 import { CameraWidgetComponent } from '../../components/camera-widget.component/camera-widget.component';
-import { FormsModule } from '@angular/forms'; // Cần cho binding select
+import { AnalysisResult } from '../../core/models/object-counter.model';
+import { AiAnalysisDialogComponent } from '../../components/ai-analysis-dialog.component/ai-analysis-dialog.component';
 
 @Component({
   selector: 'app-monitor',
   standalone: true,
-  imports: [CommonModule, CameraWidgetComponent, FormsModule],
+  imports: [
+    CommonModule,
+    CameraWidgetComponent,
+    FormsModule,
+    AiAnalysisDialogComponent
+  ],
   templateUrl: './monitor.html',
   styleUrl: './monitor.scss',
 })
@@ -21,12 +32,18 @@ export class Monitor implements OnInit, OnDestroy {
   cameras = signal<any[]>([]);
 
   // 2. State cho Mobile
-  isMobile = signal<boolean>(window.innerWidth < 768); // Mặc định check theo màn hình lúc load
+  // Lưu ý: window.innerWidth chỉ chạy được trên Browser. Nếu dùng SSR cần check platform.
+  // Nhưng nếu code cũ chạy ổn thì giữ nguyên.
+  isMobile = signal<boolean>(typeof window !== 'undefined' ? window.innerWidth < 768 : false);
+
   selectedCamId = signal<number | null>(null);
 
-  // 3. Computed Signal: Tự động tính toán danh sách cần hiển thị
-  // - Desktop: Trả về tất cả
-  // - Mobile: Chỉ trả về mảng chứa 1 camera đang chọn
+  // 3. [MỚI] State cho Dialog Kết quả AI (Snapshot Counting)
+  // Hai biến này cần thiết để file HTML binding vào [(visible)] và [result]
+  analysisDialogVisible = false;
+  analysisResult: AnalysisResult | null = null;
+
+  // 4. Computed Signal: Tự động tính toán danh sách cần hiển thị
   visibleCameras = computed(() => {
     const allCams = this.cameras();
     const isMob = this.isMobile();
@@ -70,6 +87,14 @@ export class Monitor implements OnInit, OnDestroy {
   onCameraChange(event: any) {
     const val = event.target.value;
     this.selectedCamId.set(Number(val));
+  }
+
+  // [MỚI] Hàm xử lý sự kiện từ Camera Widget bắn ra
+  // File HTML đang gọi (onAnalysisComplete)="handleAnalysisComplete($event)" nên bắt buộc phải có hàm này
+  handleAnalysisComplete(result: AnalysisResult) {
+    console.log("Monitor received AI snapshot result:", result);
+    this.analysisResult = result;
+    this.analysisDialogVisible = true; // Mở Dialog lên
   }
 
   ngOnDestroy(): void {

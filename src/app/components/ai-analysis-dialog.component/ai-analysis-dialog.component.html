@@ -1,0 +1,53 @@
+<p-dialog
+      [(visible)]="visible"
+      [modal]="true"
+      [style]="{width: '70vw'}"
+      [header]="headerTitle"
+      (onHide)="onClose()"
+      [draggable]="false" [resizable]="false">
+
+      <div class="grid" *ngIf="result">
+        <div class="col-12 md:col-8">
+            <div class="flex justify-content-center bg-black-alpha-90 border-round overflow-hidden"
+                 style="height: 400px; position: relative;">
+
+                <img *ngIf="result.processed_image"
+                     [src]="'data:image/jpeg;base64,' + result.processed_image"
+                     class="h-full w-auto object-contain"
+                     style="max-width: 100%;" />
+
+                <div *ngIf="!result.processed_image" class="text-white align-self-center">
+                    Không có hình ảnh
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 md:col-4">
+            <div class="p-3 surface-card h-full border-round shadow-2 flex flex-column gap-3">
+                <div class="text-center mb-3">
+                    <h2 class="text-primary text-5xl font-bold m-0">{{ result.count }}</h2>
+                    <span class="text-500 font-semibold">VẬT THỂ TRÊN BÀN</span>
+                </div>
+
+                <div class="flex-grow-1 overflow-y-auto" style="max-height: 250px;">
+                    <p class="font-bold border-bottom-1 surface-border pb-2">Chi tiết:</p>
+                    <div *ngFor="let item of result.items; let i = index"
+                         class="flex justify-content-between py-2 border-bottom-1 surface-border">
+                        <span>#{{ i + 1 }} {{ item.label || 'Item' }}</span>
+                        <span class="text-green-600 font-bold">{{ (item.conf || 0) * 100 | number:'1.0-0' }}%</span>
+                    </div>
+                </div>
+
+                <div class="mt-auto">
+                    <p-button label="Đóng" icon="pi pi-check" styleClass="w-full" (onClick)="visible = false"></p-button>
+                </div>
+            </div>
+        </div>
+      </div>
+
+      <div *ngIf="loading" class="flex flex-column align-items-center justify-content-center p-5">
+        <i class="pi pi-spin pi-spinner text-5xl text-primary mb-3"></i>
+        <span>Đang phân tích AI...</span>
+      </div>
+
+    </p-dialog>

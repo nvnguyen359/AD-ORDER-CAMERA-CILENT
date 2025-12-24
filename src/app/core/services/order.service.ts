@@ -84,7 +84,7 @@ export class OrderService extends BaseService<Order> {
       }
     });
 
-    console.log('API Request Params:', queryParams);
+    // console.log('API Request Params:', queryParams);
 
     return this.findAll(queryParams) as Observable<OrderResponse>;
   }
