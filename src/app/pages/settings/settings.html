@@ -1,0 +1,139 @@
+<p-toast position="top-right" />
+
+<div class="surface-section px-4 py-5 md:px-6 lg:px-8">
+    <div class="flex align-items-center justify-content-between mb-4">
+        <div>
+            <h2 class="text-3xl font-medium text-900 mb-2">Cài đặt hệ thống</h2>
+            <p class="text-600 mt-0 mb-0">OC System Configuration</p>
+        </div>
+        <p-button
+            label="Lưu cấu hình"
+            icon="pi pi-save"
+            [loading]="isLoading"
+            (onClick)="onSubmit()"
+            [disabled]="settingsForm.invalid">
+        </p-button>
+    </div>
+
+    <form [formGroup]="settingsForm">
+        <p-tabs value="0">
+            <p-tablist>
+                <p-tab value="0"><i class="pi pi-eye mr-2"></i>Camera & AI</p-tab>
+                <p-tab value="1"><i class="pi pi-cog mr-2"></i>Vận hành</p-tab>
+                <p-tab value="2"><i class="pi pi-database mr-2"></i>Lưu trữ</p-tab>
+            </p-tablist>
+
+            <p-tabpanels>
+                <p-tabpanel value="0">
+                    <div formGroupName="aiConfig" class="grid formgrid">
+                        <p-fluid class="col-12 md:col-6 pr-md-4">
+                            <p-card header="Nguồn hình ảnh">
+                                <div class="field mb-4">
+                                    <label class="block mb-2 font-medium">Chọn Camera</label>
+                                    <p-autocomplete
+                                        formControlName="selectedCameraObj"
+                                        [suggestions]="filteredCameras"
+                                        (completeMethod)="filterCameras($event)"
+                                        field="label"
+                                        [dropdown]="true"
+                                        placeholder="Chọn camera..."
+                                        [forceSelection]="true">
+                                    </p-autocomplete>
+                                </div>
+                                <div class="field mb-4 flex align-items-center justify-content-between p-3 surface-ground border-round">
+                                    <label class="font-medium">Debug Mode</label>
+                                    <p-toggleswitch formControlName="debugMode" />
+                                </div>
+                                <div class="field">
+                                    <label class="block mb-3 font-medium">Đối tượng</label>
+                                    <div class="flex gap-4">
+                                        <div class="flex align-items-center">
+                                            <p-checkbox formControlName="detectPerson" [binary]="true" inputId="p" />
+                                            <label for="p" class="ml-2">Con người</label>
+                                        </div>
+                                        <div class="flex align-items-center">
+                                            <p-checkbox formControlName="detectQR" [binary]="true" inputId="q" />
+                                            <label for="q" class="ml-2">Mã QR</label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </p-card>
+                        </p-fluid>
+                        <div class="col-12 md:col-6 pl-md-4">
+                            <p-card header="Tham số AI">
+                                <div class="field mb-4">
+                                    <label class="block mb-2 font-medium">Độ nhạy: {{settingsForm.get('aiConfig.confidenceThreshold')?.value}}</label>
+                                    <p-slider formControlName="confidenceThreshold" [min]="0.1" [max]="1.0" [step]="0.05" />
+                                </div>
+                                <div class="field flex align-items-center justify-content-between mb-3">
+                                    <label class="font-medium">Vùng giám sát (ROI)</label>
+                                    <p-toggleswitch formControlName="enableROI" />
+                                </div>
+                                <div class="surface-0 p-4 border-2 border-dashed border-300 border-round text-center"
+                                     [ngClass]="{'opacity-50': !settingsForm.get('aiConfig.enableROI')?.value}">
+                                    <p-button label="Vẽ vùng ROI" icon="pi pi-pencil" [outlined]="true" (onClick)="mockDrawROI()" />
+                                </div>
+                            </p-card>
+                        </div>
+                    </div>
+                </p-tabpanel>
+
+                <p-tabpanel value="1">
+                    <div formGroupName="operationConfig" class="grid formgrid">
+                        <p-fluid class="col-12 md:col-6 pr-md-4">
+                            <p-card header="Tự động hóa">
+                                <div class="field">
+                                    <label class="block mb-2 font-medium">Idle Timeout (Giây)</label>
+                                    <p-inputnumber formControlName="idleTimeoutSeconds" [showButtons]="true" />
+                                </div>
+                            </p-card>
+                        </p-fluid>
+                        <div class="col-12 md:col-6 pl-md-4">
+                            <p-card header="Ghi hình">
+                                <div class="flex flex-column gap-3">
+                                    <div class="flex justify-content-between p-2 surface-ground border-round">
+                                        <span>Ghi hình khi có QR</span>
+                                        <p-toggleswitch formControlName="autoRecordOnQR" />
+                                    </div>
+                                    <div class="flex justify-content-between p-2 surface-ground border-round">
+                                        <span>Chụp ảnh (Snapshot)</span>
+                                        <p-toggleswitch formControlName="autoSnapshot" />
+                                    </div>
+                                    <div class="flex justify-content-between p-2 surface-ground border-round">
+                                        <span>Âm thanh (Beep)</span>
+                                        <p-toggleswitch formControlName="soundAlerts" />
+                                    </div>
+                                </div>
+                            </p-card>
+                        </div>
+                    </div>
+                </p-tabpanel>
+
+                <p-tabpanel value="2">
+                    <div formGroupName="storageConfig" class="grid formgrid p-fluid">
+                        <div class="col-12">
+                            <p-card>
+                                <div class="field mb-4">
+                                    <label class="block mb-2 font-medium">Thư mục lưu Video</label>
+                                    <input pInputText type="text" formControlName="storagePath" class="w-full" placeholder="Ví dụ: D:/CCTV_Data" />
+                                </div>
+                                <div class="grid">
+                                    <div class="col-12 md:col-6 field">
+                                        <label class="block mb-2 font-medium">Lưu trữ (Ngày)</label>
+                                        <p-inputnumber formControlName="retentionDays" [showButtons]="true" />
+                                    </div>
+                                    <div class="col-12 md:col-6 flex align-items-end mb-3">
+                                        <div class="flex justify-content-between w-full p-2 surface-ground border-round">
+                                            <span>Tự xóa khi đầy</span>
+                                            <p-toggleswitch formControlName="autoCleanup" />
+                                        </div>
+                                    </div>
+                                </div>
+                            </p-card>
+                        </div>
+                    </div>
+                </p-tabpanel>
+            </p-tabpanels>
+        </p-tabs>
+    </form>
+</div>

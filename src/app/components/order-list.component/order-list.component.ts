@@ -132,7 +132,7 @@ export class OrderListComponent implements OnInit {
               ? item.path_avatar
               : this.MEDIA_URL + item.path_avatar
             : 'assets/images/no-avatar.png',
-          duration: this.calculateDuration(item.start_at, item.closed_at),
+          duration: this.calculateDuration(item.created_at, item.closed_at),
         }));
 
         this.orders.set(processedData);

@@ -1,4 +1,5 @@
 import { Routes } from '@angular/router';
+import { SettingsComponent } from './pages/settings/settings';
 
 export const routes: Routes = [
 
@@ -13,7 +14,7 @@ export const routes: Routes = [
   },
   {
     path: 'settings',
-    loadComponent: () => import('./pages/setting/setting').then((m) => m.Setting),
+    loadComponent: () => import('./pages/settings/settings').then((m) => m.SettingsComponent),
   },
    {
     path: 'monitor',
