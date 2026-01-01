@@ -1,118 +1,121 @@
-<div class="cam-card" [class.recording]="isRecording()">
+<div class="camera-card flex flex-column  border-round-xl overflow-hidden shadow-2 surface-card ">
 
-  <div class="cam-header">
-    <div class="header-left">
-      <strong>📸 Cam {{ cameraId }}</strong>
+  <div class="header flex justify-content-between align-items-center p-3 bg-gray-900 text-white border-bottom-1 border-gray-800">
+
+    <div class="flex align-items-center gap-2 overflow-hidden">
+      <i class="pi pi-camera text-xl text-primary-400 flex-shrink-0"></i>
+      <span class="font-bold text-lg white-space-nowrap">{{ cameraName }}</span>
+
+      <span class="px-2 py-1 border-round text-xs font-bold transition-colors flex-shrink-0"
+            [class.bg-green-500]="isStreaming()" [class.bg-red-500]="!isStreaming()">
+        {{ isStreaming() ? 'LIVE' : 'OFFLINE' }}
+      </span>
+
+      <div *ngIf="scannedCode()"
+           class="scan-result-badge ml-2 px-2 py-1 border-round-sm text-white font-bold text-sm flex align-items-center gap-2 animate-scan-pulse cursor-pointer"
+           pTooltip="Mã vừa quét" tooltipPosition="bottom">
+           <i class="pi pi-qrcode text-xs"></i>
+           <span>{{ scannedCode() }}</span>
+      </div>
     </div>
 
-    <div class="header-right">
-      @if (isRecording()) {
-        <span class="badge-rec">● REC</span>
-      }
-<button class="btn-icon rec-btn"
-              (click)="toggleRecording()"
-              [title]="isRecording() ? 'Dừng ghi hình' : 'Ghi hình thủ công'">
-        <i class="pi"
-           [class.pi-circle-fill]="!isRecording()"
-           [class.pi-stop-circle]="isRecording()"
-           [style.color]="isRecording() ? '#e74c3c' : '#fff'">
-        </i>
-      </button>
-      <select (change)="changeMode($event)" class="mode-select">
-        <option value="normal">Normal</option>
-        <option value="scan">🟦 QR Scan</option>
-        <option value="security">🟥 Security</option>
-        <option value="both">🟪 All</option>
-      </select>
-
-      <button class="btn-icon" (click)="toggleFullscreen()" title="Toàn màn hình">
-        ⛶
-      </button>
+    <div *ngIf="isRecording()" class="flex align-items-center gap-2 text-red-500 animate-pulse flex-shrink-0 ml-2">
+      <i class="pi pi-circle-fill text-xs"></i>
+      <span class="font-bold text-sm">REC</span>
     </div>
   </div>
 
-  <div class="viewport" #viewport>
+  <div #viewport class="viewport relative  bg-black overflow-hidden group select-none"
+       (mousemove)="onUserInteraction()"
+       (mouseleave)="onMouseLeave()"
+       (click)="onViewportClick($event)">
 
-    @if (isFullscreen()) {
-      <button class="exit-fullscreen-btn" (click)="toggleFullscreen()">
-        ❌ Thu nhỏ
-      </button>
-    }
-
-    @if (imageBase64()) {
-      <img [src]="imageBase64()" (load)="onImageLoad($event)" alt="Live">
-    } @else {
-      <div class="placeholder">
-        @if (isStreaming()) {
-            <p>Đang tải...</p>
-        } @else {
-            <i class="pi pi-camera" style="font-size: 3rem; color: #444;"></i>
-        }
+    <div class="loading-layer" [class.hidden]="!isLoading()">
+      <div class="flex flex-column align-items-center gap-3">
+        <i class="pi pi-spin pi-spinner text-4xl text-primary"></i>
       </div>
-    }
-
-<canvas appVisualizer
-            [width]="imgWidth()"
-            [height]="imgHeight()"
-            [metadata]="metadata()"
-            [imgWidth]="imgWidth()"
-            [imgHeight]="imgHeight()"
-            [mode]="currentMode()"> </canvas>
-    <div class="center-controls" (click)="toggleStream()">
-        @if (!isStreaming()) {
-            <button class="yt-play-btn ghost-mode">
-                <i class="pi pi-play" style="font-size: 2.5rem; margin-left: 6px;"></i>
-            </button>
-        } @else {
-            <button class="yt-pause-btn">
-                <i class="pi pi-pause" style="font-size: 2rem;"></i>
-            </button>
-        }
     </div>
 
-    @if (currentOrder(); as order) {
+    <div *ngIf="!isStreaming() && !isLoading()" class="offline-state absolute top-0 left-0 w-full h-full flex justify-content-center align-items-center bg-black-alpha-90">
+       <i class="pi pi-video text-8xl text-gray-800 opacity-20"></i>
+    </div>
 
-        @if (!isStreaming()) {
-            <div class="offline-info-card" (click)="toggleStream()">
-                <div class="card-header">
-                    <span class="status-dot"></span> Đang xử lý
-                </div>
-                <div class="card-body">
-                    <div class="row code">{{ order.code }}</div>
-                    <div class="row note-group">
-                        <span class="status-label">{{ order.status || 'Processing' }}</span>
-                        @if (displayNote()) {
-                             <span class="divider">•</span>
-                             <span class="note-text">{{ displayNote() }}</span>
-                        }
-                    </div>
-                    <div class="row time">⏱ {{ elapsedMinutes() }} phút trước</div>
-                </div>
+    <div class="play-overlay absolute top-0 left-0 w-full h-full flex justify-content-center align-items-center pointer-events-none transition-opacity duration-300"
+         [class.opacity-0]="isStreaming() && !showControls()"
+         [class.opacity-100]="!isStreaming() || showControls()">
+      <div class="play-btn bg-black-alpha-50 border-circle w-5rem h-5rem flex justify-content-center align-items-center border-2 border-white-alpha-30 backdrop-blur-sm shadow-4">
+        <i class="pi text-4xl text-white"
+           [class.pi-play]="!isStreaming()"
+           [class.pi-pause]="isStreaming()"></i>
+      </div>
+    </div>
+
+    <ng-container *ngIf="isStreaming()">
+      <img
+        [src]="streamUrl()"
+        (load)="onImageLoad($event)"
+        (error)="onImageError($event)"
+        class="video-layer absolute top-0 left-0 w-full  object-contain"
+        alt="Stream"
+      >
+      <canvas
+        appVisualizer
+        [metadata]="visibleOverlayData()"
+        [imgWidth]="imgWidth()"
+        [imgHeight]="imgHeight()"
+        mode="both"
+        class="overlay-layer absolute top-0 left-0 w-full object-contain pointer-events-none"
+      >
+      </canvas>
+    </ng-container>
+
+  </div>
+
+  <div class="footer flex justify-content-between align-items-center p-2 bg-gray-900 border-top-1 border-gray-800"
+       (click)="$event.stopPropagation()">
+
+    <div class="mode-selector">
+      <p-select
+        [options]="viewOptions"
+        [ngModel]="viewMode()"
+        (onChange)="viewMode.set($event.value)"
+        optionLabel="label"
+        optionValue="value"
+        [disabled]="!isStreaming()"
+        appendTo="body"
+        styleClass="custom-select"
+        panelStyleClass="custom-select-panel">
+
+        <ng-template pTemplate="selectedItem" let-selected>
+            <div class="flex align-items-center gap-2" *ngIf="selected">
+                <i [class]="selected.icon"></i>
+                <span class="font-bold text-sm">{{ selected.label }}</span>
             </div>
-        }
+        </ng-template>
 
-        @if (isStreaming()) {
-            @if (!showOnlineInfo()) {
-                <button class="restore-info-btn" (click)="showOnlineInfo.set(true)" title="Hiện thông tin">
-                    ℹ️
-                </button>
-            }
+        <ng-template pTemplate="item" let-option>
+            <div class="flex align-items-center gap-2">
+                <i [class]="option.icon"></i>
+                <span class="text-sm">{{ option.label }}</span>
+            </div>
+        </ng-template>
 
-            @if (showOnlineInfo()) {
-                <div class="online-info-stack">
-                    <button class="close-stack-btn" (click)="showOnlineInfo.set(false)">×</button>
-                    <div class="stack-code">{{ order.code }}</div>
-                    <div class="stack-meta">
-                        <span class="meta-status">{{ order.status || 'Processing' }}</span>
-                        <span class="meta-time">⏱ {{ elapsedMinutes() }}m</span>
-                    </div>
-                    @if (displayNote()) {
-                        <div class="stack-note">{{ displayNote() }}</div>
-                    }
-                </div>
-            }
-        }
-    }
+      </p-select>
+    </div>
 
+    <div class="flex gap-2">
+      <button class="p-button p-component p-button-rounded p-button-text"
+              [class.p-button-danger]="isRecording()" [class.p-button-secondary]="!isRecording()"
+              [disabled]="!isStreaming()"
+              (click)="toggleRecording($event)">
+        <i [class]="isRecording() ? 'pi pi-stop-circle' : 'pi pi-circle'"></i>
+      </button>
+
+      <button class="p-button p-component p-button-rounded p-button-text p-button-secondary"
+              [disabled]="!isStreaming()"
+              (click)="toggleFullscreen($event)">
+        <i [class]="isFullscreen() ? 'pi pi-times' : 'pi pi-expand'"></i>
+      </button>
+    </div>
   </div>
 </div>

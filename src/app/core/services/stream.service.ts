@@ -1,68 +1,79 @@
 import { Injectable, Inject, PLATFORM_ID, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { isPlatformBrowser } from '@angular/common';
-import { Observable, Subject } from 'rxjs';
+import { Observable, Subject, timer } from 'rxjs';
 import { webSocket, WebSocketSubject } from 'rxjs/webSocket';
-import { filter, share } from 'rxjs/operators';
+import { filter, share, retryWhen, delay, tap, catchError } from 'rxjs/operators';
+import { jwtDecode } from 'jwt-decode'; // [FIX] Import jwt-decode
 import { environment } from '../../environments/environment';
 
 export interface StreamMessage {
-  camera_id: number;
+  camera_id?: number;
   image?: string;
   metadata?: any[];
   event?: string;
   data?: any;
   mode?: string;
   error?: string;
+  timestamp?: string;
 }
 
 @Injectable({ providedIn: 'root' })
 export class StreamService {
   private http = inject(HttpClient);
 
-  // [FIX QUAN TRỌNG]: Đổi đường dẫn sang '/oc-cameras/ws'
-  private wsUrl = environment.apiUrl.replace(/^http/, 'ws') + '/oc-cameras/ws';
+  // Prefix API
+  private readonly API_PREFIX = '/cameras';
+
+  private streamMessages$ = new Subject<StreamMessage>();
+  public messages$ = this.streamMessages$.asObservable();
 
   private socket$: WebSocketSubject<StreamMessage> | null = null;
-  private streamMessages$ = new Subject<StreamMessage>();
 
   constructor(@Inject(PLATFORM_ID) private platformId: Object) {}
 
-  // 1. Lấy danh sách Camera
-  getCameras(): Observable<any> {
-    // Nếu bạn dùng hệ thống mới hoàn toàn thì nên đổi thành /oc-cameras
-    // return this.http.get(`${environment.apiUrl}/oc-cameras`);
-    return this.http.get(`${environment.apiUrl}/cameras`);
+  private get baseUrl() {
+    return `${environment.apiUrl}${this.API_PREFIX}`;
   }
 
-  // 2. Gửi lệnh Connect/Disconnect (Socket Logic trên Server)
-  toggleCamera(id: number, action: 'connect' | 'disconnect'): Observable<any> {
-    const url = `${environment.apiUrl}/oc-cameras/${id}/${action}`;
-    return this.http.post(url, {});
+  private get wsUrl() {
+    return environment.apiUrl.replace(/^http/, 'ws') + this.API_PREFIX + '/ws';
   }
 
-  // [MỚI] 3. API Quay thủ công (Manual Start)
-  startRecording(id: number): Observable<any> {
-    return this.http.post(`${environment.apiUrl}/oc-cameras/${id}/manual-start`, {});
-  }
+  // =================================================================
+  // A. PHẦN KẾT NỐI SOCKET (CORE)
+  // =================================================================
 
-  // [MỚI] 4. API Dừng quay thủ công (Manual Stop)
-  stopRecording(id: number): Observable<any> {
-    return this.http.post(`${environment.apiUrl}/oc-cameras/${id}/manual-stop`, {});
-  }
-
-  // 5. Kết nối WebSocket
-  connectSocket(token: string): void {
+  connectSocket(token: string = '', cameraId?: number): void {
     if (!isPlatformBrowser(this.platformId)) return;
     if (this.socket$ && !this.socket$.closed) return;
 
-    console.log(`[StreamService] Connecting WS: ${this.wsUrl}`);
+    // [FIX QUAN TRỌNG] Giải mã Token để lấy User ID
+    let userId: number | null = null;
+    if (token) {
+      try {
+        const decoded: any = jwtDecode(token);
+        // Backend thường lưu ID trong claim 'id', 'user_id' hoặc 'sub'
+        userId = decoded.id || decoded.user_id || (Number(decoded.sub) ? Number(decoded.sub) : null);
+        console.log('[StreamService] Detected UserID from Token:', userId);
+      } catch (e) {
+        console.error('[StreamService] Failed to decode token:', e);
+      }
+    }
+
+    // Xây dựng URL với user_id
+    let url = `${this.wsUrl}?token=${token}`;
+
+    // [FIX] Gửi kèm user_id để Backend SocketManager lưu vào danh sách connection
+    if (userId) url += `&user_id=${userId}`;
+    if (cameraId) url += `&camera_id=${cameraId}`;
+
+    console.log(`[StreamService] Connecting WS: ${url}`);
 
     this.socket$ = webSocket<StreamMessage>({
-      url: `${this.wsUrl}?token=${token}`,
+      url: url,
       openObserver: { next: () => console.log('✅ WS Connected') },
       closeObserver: { next: () => console.log('❌ WS Closed') },
-      // [QUAN TRỌNG] Thêm deserializer để tránh lỗi parse nếu server gửi text
       deserializer: (msg) => {
         try {
           return JSON.parse(msg.data);
@@ -72,36 +83,68 @@ export class StreamService {
       }
     });
 
-    this.socket$.subscribe({
+    this.socket$.pipe(
+      retryWhen(errors =>
+        errors.pipe(
+          tap(err => console.error('WS Error, Reconnecting...', err)),
+          delay(3000)
+        )
+      )
+    ).subscribe({
       next: (msg) => {
-          // Log nhẹ để debug xem tin về chưa
-          if(msg.event) console.log('🔥 Socket Event:', msg.event);
-          this.streamMessages$.next(msg);
+        if (msg.event) console.log('🔥 Socket Event:', msg.event);
+        this.streamMessages$.next(msg);
       },
-      error: (err) => console.error('WS Error:', err),
-      complete: () => console.log('WS Complete'),
+      error: (err) => console.error('WS Fatal Error:', err),
+      complete: () => console.log('WS Connection Completed')
     });
-  }
-
-  // 6. Lấy luồng dữ liệu riêng cho 1 Camera
-  getCameraStream(cameraId: number): Observable<StreamMessage> {
-    return this.streamMessages$.pipe(
-      filter((msg) => msg.camera_id === cameraId),
-      share()
-    );
-  }
-
-  // 7. Đổi chế độ hiển thị (Client -> Server -> Client Broadcast)
-  changeMode(camId: number, mode: string) {
-    if (this.socket$) {
-      this.socket$.next({ camera_id: camId, mode: mode } as any);
-    }
   }
 
   disconnectSocket() {
     if (this.socket$) {
       this.socket$.complete();
       this.socket$ = null;
+    }
+  }
+
+  // =================================================================
+  // B. CÁC API HTTP
+  // =================================================================
+
+  getCameras(): Observable<any> {
+    return this.http.get(this.baseUrl);
+  }
+
+  toggleCamera(id: number, action: 'connect' | 'disconnect'): Observable<any> {
+    return this.http.post(`${this.baseUrl}/${id}/${action}`, {});
+  }
+
+  startRecording(id: number): Observable<any> {
+    return this.http.post(`${this.baseUrl}/${id}/manual-start`, {});
+  }
+
+  stopRecording(id: number): Observable<any> {
+    return this.http.post(`${this.baseUrl}/${id}/manual-stop`, {});
+  }
+
+  getAIOverlay(id: number): Observable<any[]> {
+    return this.http.get<any[]>(`${this.baseUrl}/${id}/ai-overlay`);
+  }
+
+  // =================================================================
+  // C. HELPER CHO COMPONENT
+  // =================================================================
+
+  getCameraStream(cameraId: number): Observable<StreamMessage> {
+    return this.messages$.pipe(
+      filter((msg) => msg.camera_id === cameraId),
+      share()
+    );
+  }
+
+  sendMessage(msg: any) {
+    if (this.socket$) {
+      this.socket$.next(msg);
     }
   }
 }

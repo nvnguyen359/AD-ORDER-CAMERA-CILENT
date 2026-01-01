@@ -1,28 +1,26 @@
 import {
-  Component,
-  Input,
-  OnInit,
-  OnDestroy,
-  signal,
-  inject,
-  ViewChild,
-  ElementRef,
-  computed,
-  ChangeDetectionStrategy,
+  Component, Input, OnInit, OnDestroy, signal, inject, ViewChild,
+  ElementRef, computed, ChangeDetectionStrategy, effect
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Subscription, interval } from 'rxjs';
+import { FormsModule } from '@angular/forms';
+import { SelectModule } from 'primeng/select'; // PrimeNG v21 Select
+import { Subscription, interval, of } from 'rxjs';
+import { switchMap, catchError, filter } from 'rxjs/operators';
 import { StreamService, StreamMessage } from '../../core/services/stream.service';
+import { CameraService } from '../../core/services/camera.service';
 import { VisualizerDirective } from '../../features/live-cameras/visualizer.directive';
-import { OrderInfo } from '../../core/models/monitor-camera.model';
 import { MessageService } from 'primeng/api';
+import { environment } from '../../environments/environment';
+
+type ViewMode = 'NONE' | 'ALL' | 'HUMAN' | 'QRCODE';
+
 @Component({
   selector: 'app-camera-widget',
   standalone: true,
-  imports: [CommonModule, VisualizerDirective],
+  imports: [CommonModule, VisualizerDirective, FormsModule, SelectModule],
   templateUrl: './camera-widget.component.html',
   styleUrls: ['./camera-widget.component.scss'],
-  // [FIX] Bật OnPush để tối ưu render và tránh lỗi check cycle
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class CameraWidgetComponent implements OnInit, OnDestroy {
@@ -30,196 +28,210 @@ export class CameraWidgetComponent implements OnInit, OnDestroy {
   @Input() cameraName: string = 'Camera';
 
   private streamService = inject(StreamService);
+  private cameraService = inject(CameraService);
   private messageService = inject(MessageService);
+
   private sub: Subscription | null = null;
+  private pollSub: Subscription | null = null;
   private timerSub: Subscription | null = null;
 
   // --- STATES ---
   isStreaming = signal<boolean>(false);
   isRecording = signal<boolean>(false);
-  currentOrder = signal<any | null>(null);
+  isLoading = signal<boolean>(false);
+  isFullscreen = signal<boolean>(false);
 
-  // Data Stream
-  imageBase64 = signal<string>('');
-  metadata = signal<any[]>([]); // Dữ liệu AI vẽ khung
+  // [MỚI] Biến chứa mã vạch/QR vừa quét được
+  scannedCode = signal<string | null>(null); // Ví dụ: 'VN-123456'
 
-  // Kích thước ảnh (Chuyển sang Signal)
+  showControls = signal<boolean>(true);
+  private hideControlsTimer: any;
+  private scanResetTimer: any; // Timer để tự ẩn mã sau một thời gian (nếu cần)
+
+  viewMode = signal<ViewMode>('NONE');
+
+  viewOptions = [
+    { label: 'Không hiển thị', value: 'NONE',   icon: 'pi pi-eye-slash' },
+    { label: 'Tất cả',         value: 'ALL',    icon: 'pi pi-eye' },
+    { label: 'Người',          value: 'HUMAN',  icon: 'pi pi-user' },
+    { label: 'QR Code',        value: 'QRCODE', icon: 'pi pi-qrcode' }
+  ];
+
+  rawOverlayData = signal<any[]>([]);
+
+  visibleOverlayData = computed(() => {
+    const mode = this.viewMode();
+    if (mode === 'NONE') return [];
+
+    const data = this.rawOverlayData();
+    if (mode === 'ALL') return data;
+
+    return data.filter(item => {
+      const isHuman = item.label === 'Person' || item.color === '#e74c3c';
+      if (mode === 'HUMAN') return isHuman;
+      if (mode === 'QRCODE') return !isHuman;
+      return true;
+    });
+  });
+
   imgWidth = signal<number>(1280);
   imgHeight = signal<number>(720);
 
-  // UX States
-  isFullscreen = signal<boolean>(false);
-  showOnlineInfo = signal<boolean>(true);
-  elapsedMinutes = signal<number>(0);
-  currentMode = signal<string>('normal');
   @ViewChild('viewport') viewportRef!: ElementRef;
 
-  // Cắt chuỗi Note
-  displayNote = computed(() => {
-    const order = this.currentOrder();
-    if (!order || !order.note) return '';
-    return order.note.split('{')[0].trim();
+  streamUrl = computed(() => {
+    return this.isStreaming()
+      ? `${environment.apiUrl}/cameras/${this.cameraId}/stream?t=${Date.now()}`
+      : '';
   });
 
-  private onFullscreenChange = () => {
-    this.isFullscreen.set(!!document.fullscreenElement);
-  };
+  constructor() {
+    effect(() => {
+      if (this.isStreaming() && this.viewMode() !== 'NONE') {
+        this.startOverlayPolling();
+      } else {
+        this.stopOverlayPolling();
+        this.rawOverlayData.set([]);
+      }
+    });
+  }
 
   ngOnInit(): void {
-    // 1. Socket
     this.sub = this.streamService.getCameraStream(this.cameraId).subscribe({
-      next: (msg: StreamMessage) => this.handleMessage(msg),
-      error: (err) => console.error(`Cam ${this.cameraId} socket error:`, err),
+      next: (msg) => this.handleMessage(msg),
+      error: (err) => console.error(err),
     });
 
-    // 2. Timer
-    this.timerSub = interval(5000).subscribe(() => this.updateElapsedTime());
-
-    // 3. Fullscreen Listener
-    document.addEventListener('fullscreenchange', this.onFullscreenChange);
-
-    this.connect();
+    document.addEventListener('fullscreenchange', () => this.isFullscreen.set(!!document.fullscreenElement));
+    this.resetControlTimer();
   }
 
   ngOnDestroy(): void {
     this.sub?.unsubscribe();
     this.timerSub?.unsubscribe();
-    document.removeEventListener('fullscreenchange', this.onFullscreenChange);
-  }
-  toggleRecording() {
-    if (this.isRecording()) {
-      // Đang quay -> Gọi API Dừng
-      this.streamService.stopRecording(this.cameraId).subscribe({
-        next: (res: any) => {
-          this.messageService.add({
-            severity: 'success',
-            summary: 'Đã dừng quay',
-            detail: res.message,
-          });
-          // State isRecording sẽ tự động cập nhật về false khi nhận được socket event ORDER_STOPPED
-        },
-        error: (err) => {
-          this.messageService.add({
-            severity: 'error',
-            summary: 'Lỗi',
-            detail: err.error?.detail || 'Không thể dừng quay',
-          });
-        },
-      });
-    } else {
-      // Chưa quay -> Gọi API Bắt đầu
-      this.streamService.startRecording(this.cameraId).subscribe({
-        next: (res: any) => {
-          this.messageService.add({
-            severity: 'success',
-            summary: 'Bắt đầu quay',
-            detail: res.message,
-          });
-          // State isRecording sẽ tự động cập nhật về true khi nhận được socket event ORDER_CREATED
-        },
-        error: (err) => {
-          this.messageService.add({
-            severity: 'error',
-            summary: 'Lỗi',
-            detail: err.error?.detail || 'Không thể bắt đầu quay',
-          });
-        },
-      });
-    }
-  }
-  private handleMessage(msg: StreamMessage) {
-    // Xử lý Ảnh & Metadata
-    if (msg.image) {
-      if (this.isStreaming()) {
-        this.imageBase64.set(`data:image/jpeg;base64,${msg.image}`);
-
-        // Cập nhật metadata (Quan trọng)
-        const meta = msg.metadata && Array.isArray(msg.metadata) ? msg.metadata : [];
-        this.metadata.set(meta);
-      }
-      return;
-    }
-
-    // Xử lý Sự kiện
-    if (msg.event) {
-      if (msg.event === 'ORDER_CREATED') {
-        this.isRecording.set(true);
-        if (msg.data) {
-          this.currentOrder.set(msg.data);
-          this.updateElapsedTime();
-          this.showOnlineInfo.set(true);
-        }
-      } else if (msg.event === 'ORDER_STOPPED') {
-        this.isRecording.set(false);
-        this.currentOrder.set(null);
-        this.elapsedMinutes.set(0);
-      }
-    }
-  }
-
-  private updateElapsedTime() {
-    const order = this.currentOrder();
-    if (order) {
-      // Check các trường thời gian có thể có
-      const timeStr = order.start_at || order.start_time || order.startTime;
-      if (timeStr) {
-        const start = new Date(timeStr).getTime();
-        const now = Date.now();
-        const diffMins = Math.max(0, Math.floor((now - start) / 60000));
-        this.elapsedMinutes.set(diffMins);
-      }
-    } else {
-      this.elapsedMinutes.set(0);
-    }
-  }
-
-  toggleStream() {
+    this.stopOverlayPolling();
+    clearTimeout(this.hideControlsTimer);
+    clearTimeout(this.scanResetTimer);
     if (this.isStreaming()) this.disconnect();
-    else this.connect();
   }
 
-  connect() {
-    this.isStreaming.set(true);
-    this.streamService.toggleCamera(this.cameraId, 'connect').subscribe();
+  // --- INTERACTION ---
+
+  onUserInteraction() {
+    this.showControls.set(true);
+    this.resetControlTimer();
   }
 
-  disconnect() {
-    this.isStreaming.set(false);
-    this.imageBase64.set('');
-    this.metadata.set([]);
-    this.streamService.toggleCamera(this.cameraId, 'disconnect').subscribe();
+  onMouseLeave() {
+    if (this.isStreaming()) {
+        this.showControls.set(false);
+    }
   }
 
-  changeMode(event: Event) {
-    const target = event.target as HTMLSelectElement;
-    if (target) {
-      // 1. Cập nhật UI Frontend ngay lập tức
-      this.currentMode.set(target.value);
+  resetControlTimer() {
+    clearTimeout(this.hideControlsTimer);
+    this.hideControlsTimer = setTimeout(() => {
+      if (this.isStreaming()) {
+        this.showControls.set(false);
+      }
+    }, 2000);
+  }
 
-      // 2. Gửi lệnh xuống Backend (để xử lý logic server nếu cần)
-      this.streamService.changeMode(this.cameraId, target.value);
+  onViewportClick(event: MouseEvent) {
+    if ((event.target as HTMLElement).closest('p-select, button, .p-select-overlay, .p-select-item')) return;
+    this.toggleConnect();
+    this.onUserInteraction();
+  }
+
+  // --- ACTIONS ---
+
+  toggleConnect() {
+    const nextState = !this.isStreaming();
+    if (nextState) this.isLoading.set(true);
+
+    const action = nextState ? 'connect' : 'disconnect';
+    this.streamService.toggleCamera(this.cameraId, action).subscribe({
+      next: () => {
+        this.isStreaming.set(nextState);
+        if (!nextState) this.isLoading.set(false);
+        this.resetControlTimer();
+      },
+      error: () => {
+        this.isLoading.set(false);
+        this.isStreaming.set(false);
+        this.messageService.add({severity: 'error', summary: 'Lỗi', detail: 'Không thể kết nối'});
+      }
+    });
+  }
+
+  toggleRecording(event?: Event) {
+    event?.stopPropagation();
+    const action$ = this.isRecording()
+      ? this.streamService.stopRecording(this.cameraId)
+      : this.streamService.startRecording(this.cameraId);
+
+    action$.subscribe({
+      next: (res: any) => this.messageService.add({ severity: 'success', summary: 'Thành công', detail: res.mes }),
+      error: () => this.messageService.add({ severity: 'error', summary: 'Lỗi', detail: 'Không thể thực hiện' })
+    });
+  }
+
+  private startOverlayPolling() {
+    if (this.pollSub) return;
+    this.pollSub = interval(100).pipe(
+      filter(() => this.isStreaming()),
+      switchMap(() => this.cameraService.getAIOverlay(this.cameraId).pipe(
+        catchError(() => of([]))
+      ))
+    ).subscribe(data => this.rawOverlayData.set(data));
+  }
+
+  private stopOverlayPolling() {
+    this.pollSub?.unsubscribe();
+    this.pollSub = null;
+  }
+
+  private handleMessage(msg: StreamMessage) {
+ const data = this.rawOverlayData();
+ console.log(data)
+    if (msg.event === 'ORDER_CREATED') {
+        this.isRecording.set(true);
+    } else if (msg.event === 'ORDER_STOPPED') {
+        this.isRecording.set(false);
+    }
+    // [MỚI] Xử lý sự kiện quét QR (Giả định msg.event là 'QR_SCANNED' hoặc 'BARCODE')
+    else if (msg.event === 'QR_SCANNED' || msg.event === 'BARCODE_DETECTED') {
+
+        // Cập nhật mã hiển thị
+        this.scannedCode.set(msg.data?.code || msg.data);
+
+        // (Tuỳ chọn) Tự động ẩn sau 5 giây nếu không quét mới
+        clearTimeout(this.scanResetTimer);
+        this.scanResetTimer = setTimeout(() => this.scannedCode.set(null), 5000);
     }
   }
 
   onImageLoad(event: Event) {
     const img = event.target as HTMLImageElement;
-    // Kiểm tra xem kích thước có thực sự thay đổi không
-    if (this.imgWidth() !== img.naturalWidth || this.imgHeight() !== img.naturalHeight) {
-      // [FIX] Bọc trong setTimeout để đẩy việc cập nhật sang tick tiếp theo
-      // Khắc phục lỗi NG0100: ExpressionChangedAfterItHasBeenCheckedError
-      setTimeout(() => {
+    if (img.naturalWidth > 0) {
+      if (this.imgWidth() !== img.naturalWidth) {
         this.imgWidth.set(img.naturalWidth);
         this.imgHeight.set(img.naturalHeight);
-      }, 0);
+      }
+      this.isLoading.set(false);
     }
   }
 
-  toggleFullscreen() {
+  onImageError(event: Event) { }
+
+  disconnect() {
+    this.isStreaming.set(false);
+    this.streamService.toggleCamera(this.cameraId, 'disconnect').subscribe();
+  }
+
+  toggleFullscreen(event?: Event) {
+    event?.stopPropagation();
     const elem = this.viewportRef.nativeElement;
-    if (!document.fullscreenElement) {
-      elem.requestFullscreen().catch((err: any) => console.error('Fullscreen Error:', err));
-    } else {
-      document.exitFullscreen();
-    }
+    !document.fullscreenElement ? elem.requestFullscreen() : document.exitFullscreen();
   }
 }

@@ -46,7 +46,7 @@ export class VisualizerDirective implements OnChanges {
 
     if (!this.metadata || this.metadata.length === 0) return;
 
-    this.ctx.lineWidth = 5; // Nét vẽ dày
+    this.ctx.lineWidth = 1; // Nét vẽ dày
     this.ctx.font = "bold 16px Arial";
 
     this.metadata.forEach(item => {

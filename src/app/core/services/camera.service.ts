@@ -1,11 +1,11 @@
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpParams } from '@angular/common/http';
+import { HttpClient, HttpParams, HttpHeaders } from '@angular/common/http'; // [FIX] Import HttpHeaders
 import { Observable } from 'rxjs';
 
 import { MonitorCamera } from '../models/monitor-camera.model';
 import { environment } from '../../environments/environment';
 
-// Định nghĩa Interface trả về từ Server (Response Wrapper)
+
 export interface ApiResponse<T> {
   code: number;
   mes: string;
@@ -23,21 +23,29 @@ export class CameraService {
 
   /**
    * Lấy danh sách tất cả camera
-   * API: GET /cameras
    */
   getAllCameras(): Observable<ApiResponse<MonitorCamera[]>> {
     return this.http.get<ApiResponse<MonitorCamera[]>>(`${this.apiUrl}`, {
-      params: new HttpParams()
-        .set('skip', 0)
-        .set('limit', 100) // Lấy tối đa 100 cam
+      params: new HttpParams().set('skip', 0).set('limit', 100)
     });
   }
 
   /**
    * Lấy chi tiết 1 camera
-   * API: GET /cameras/{id}
    */
   getCameraById(id: number): Observable<ApiResponse<MonitorCamera>> {
     return this.http.get<ApiResponse<MonitorCamera>>(`${this.apiUrl}/${id}`);
+  }
+
+  /**
+   * [FIX QUAN TRỌNG] API lấy dữ liệu AI Overlay (Polling)
+   * Thêm header 'X-Skip-Loading' để Interceptor không hiện màn hình chờ
+   */
+  getAIOverlay(id: number): Observable<any[]> {
+    return this.http.get<any[]>(`${this.apiUrl}/${id}/ai-overlay`, {
+      headers: new HttpHeaders({
+        'X-Skip-Loading': 'true' // <--- Header này sẽ chặn Loading Global
+      })
+    });
   }
 }

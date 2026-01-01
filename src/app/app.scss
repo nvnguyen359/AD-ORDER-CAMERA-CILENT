@@ -212,4 +212,12 @@ footer {}
   top: 0;
   left: 0;
   z-index: 0;
+  padding-top: 34px;
+}
+header{
+  position: fixed;
+  z-index: 99999;
+  display: flex;
+  width: 100%;
+  background: var(--primary-color);
 }

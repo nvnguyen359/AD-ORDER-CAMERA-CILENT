@@ -5,7 +5,7 @@ import { environment } from '../../environments/environment';
 
 export interface SystemConfig {
   aiConfig: {
-    selectedCameraId: number;
+    selectedCameraId: number | null; // Allow null
     confidenceThreshold: number;
     debugMode: boolean;
     detectPerson: boolean;
@@ -23,29 +23,25 @@ export interface SystemConfig {
     retentionDays: number;
     autoCleanup: boolean;
   };
+  times: {
+    open: string;
+    close: string;
+  };
 }
 
 @Injectable({
   providedIn: 'root'
 })
 export class SettingsService {
-  // Đảm bảo URL trỏ đúng về backend
-  private apiUrl = `${environment.apiUrl}`; // Hoặc `${environment.apiUrl}`
+  private apiUrl = `${environment.apiUrl}`;
 
   constructor(private http: HttpClient) {}
 
   getCameras(): Observable<any[]> {
-    // Thêm skip/limit nếu API yêu cầu
     return this.http.get<any>(`${this.apiUrl}/cameras`).pipe(
       map((res: any) => {
-        // === FIX QUAN TRỌNG: Lấy dữ liệu từ thuộc tính .data ===
         const list = res.data || [];
-
-        if (!Array.isArray(list)) {
-            console.error('API Cameras trả về format lạ:', res);
-            return [];
-        }
-
+        if (!Array.isArray(list)) return [];
         return list.map((cam: any) => ({
           label: cam.name || `Camera ${cam.id}`,
           value: cam.id
@@ -55,10 +51,13 @@ export class SettingsService {
   }
 
   getSettings(): Observable<SystemConfig> {
-    return this.http.get<SystemConfig>(`${this.apiUrl}/settings`);
+    // [FIX QUAN TRỌNG]: Thêm pipe map để lấy res.data
+    return this.http.get<any>(`${this.apiUrl}/settings`).pipe(
+      map(res => res.data as SystemConfig)
+    );
   }
 
-  saveSettings(config: SystemConfig): Observable<any> {
-    return this.http.post(`${this.apiUrl}/settings`, config);
+  saveSettings(config: any): Observable<any> {
+    return this.http.put(`${this.apiUrl}/settings`, config);
   }
 }

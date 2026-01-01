@@ -1,16 +1,18 @@
-import { Component, inject, OnDestroy, OnInit, signal, computed, HostListener } from '@angular/core';
+import { Component, OnInit, OnDestroy, signal, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms'; // Cần cho binding select
 
-// Services
-import { StorageService } from '../../core/services/storage.service';
+import { CameraService } from '../../core/services/camera.service';
 import { StreamService } from '../../core/services/stream.service';
+import { OrderService } from '../../core/services/order.service'; // 1️⃣ Import OrderService
+import { StorageService } from '../../core/services/storage.service';
 import { environment } from '../../environments/environment';
 
-// Components
+import { Subscription } from 'rxjs';
+import { ButtonModule } from 'primeng/button';
+import { TooltipModule } from 'primeng/tooltip';
+import { ScrollPanelModule } from 'primeng/scrollpanel';
+import { ActivityStatsComponent } from '../../components/activity-stats.component/activity-stats.component';
 import { CameraWidgetComponent } from '../../components/camera-widget.component/camera-widget.component';
-import { AnalysisResult } from '../../core/models/object-counter.model';
-import { AiAnalysisDialogComponent } from '../../components/ai-analysis-dialog.component/ai-analysis-dialog.component';
 
 @Component({
   selector: 'app-monitor',
@@ -18,86 +20,156 @@ import { AiAnalysisDialogComponent } from '../../components/ai-analysis-dialog.c
   imports: [
     CommonModule,
     CameraWidgetComponent,
-    FormsModule,
-    AiAnalysisDialogComponent
+    ActivityStatsComponent,
+    ButtonModule,
+    TooltipModule,
+    ScrollPanelModule,
   ],
   templateUrl: './monitor.html',
-  styleUrl: './monitor.scss',
+  styleUrls: ['./monitor.scss'],
 })
-export class Monitor implements OnInit, OnDestroy {
+export class MonitorComponent implements OnInit, OnDestroy {
+  private cameraService = inject(CameraService);
   private streamService = inject(StreamService);
   private storageService = inject(StorageService);
+  private orderService = inject(OrderService); // 2️⃣ Inject OrderService
 
-  // 1. Danh sách gốc từ API
+  // --- SIGNALS ---
   cameras = signal<any[]>([]);
+  selectedCamera = signal<any>(null);
+  isLoading = signal<boolean>(false);
+  activePackingOrders = signal<any[]>([]);
 
-  // 2. State cho Mobile
-  // Lưu ý: window.innerWidth chỉ chạy được trên Browser. Nếu dùng SSR cần check platform.
-  // Nhưng nếu code cũ chạy ổn thì giữ nguyên.
-  isMobile = signal<boolean>(typeof window !== 'undefined' ? window.innerWidth < 768 : false);
+  private sub: Subscription | null = null;
 
-  selectedCamId = signal<number | null>(null);
+  ngOnInit() {
+    const token = this.storageService.getItem(environment.ACCESS_TOKEN_KEY) || '';
 
-  // 3. [MỚI] State cho Dialog Kết quả AI (Snapshot Counting)
-  // Hai biến này cần thiết để file HTML binding vào [(visible)] và [result]
-  analysisDialogVisible = false;
-  analysisResult: AnalysisResult | null = null;
+    // 1. Kết nối Socket
+    this.streamService.connectSocket(token);
 
-  // 4. Computed Signal: Tự động tính toán danh sách cần hiển thị
-  visibleCameras = computed(() => {
-    const allCams = this.cameras();
-    const isMob = this.isMobile();
-    const selectedId = this.selectedCamId();
+    // 2. Load Cameras (Và sau đó sẽ load Active Orders)
+    this.loadCameras();
 
-    if (isMob && selectedId !== null) {
-      return allCams.filter(c => c.id == selectedId);
-    }
-    return allCams;
-  });
-
-  // Lắng nghe resize để cập nhật isMobile
-  @HostListener('window:resize', ['$event'])
-  onResize(event: any) {
-    this.isMobile.set(event.target.innerWidth < 768);
+    // 3. Lắng nghe Socket cho các sự kiện REAL-TIME
+    this.sub = this.streamService.messages$.subscribe((msg: any) => {
+      this.handleSocketMessage(msg);
+    });
   }
 
-  ngOnInit(): void {
-    // Gọi API lấy list
-    this.streamService.getCameras().subscribe({
-      next: (res: any) => {
-        const data = res.data || [];
-        this.cameras.set(data);
+  ngOnDestroy() {
+    this.sub?.unsubscribe();
+    this.streamService.disconnectSocket();
+  }
 
-        // Nếu có dữ liệu, mặc định chọn cam đầu tiên (cho mobile)
-        if (data.length > 0) {
-          this.selectedCamId.set(data[0].id);
+  loadCameras() {
+    this.cameraService.getAllCameras().subscribe((res) => {
+      setTimeout(() => {
+        this.cameras.set(res.data);
+
+        // Tự động chọn cam đầu tiên nếu chưa chọn
+        if (!this.selectedCamera() && res.data.length > 0) {
+          this.selectCamera(res.data[0]);
+        }
+
+        // 3️⃣ [QUAN TRỌNG] Sau khi có danh sách Camera (để lấy tên), ta load đơn đang chạy
+        this.loadInitialActiveOrders();
+      }, 0);
+    });
+  }
+
+  // 4️⃣ Hàm mới: Lấy lại các đơn hàng đang đóng gói từ DB
+  loadInitialActiveOrders() {
+    // Gọi API lấy đơn có status = 'packing'
+    this.orderService.getOrders({ status: 'packing', pageSize: 100 }).subscribe({
+      next: (res) => {
+        if (res.data) {
+          const mappedOrders = res.data.map((order: any) => ({
+            camera_id: order.camera_id,
+            // Tìm tên camera dựa vào ID
+            camera_name: this.cameras().find((c) => c.id === order.camera_id)?.name || `Cam ${order.camera_id}`,
+            code: order.code,
+            order_id: order.id,
+            start_time: new Date(order.created_at), // Hoặc order.start_at
+            avatar: this.resolveAvatar(order.path_avatar || order.full_avatar_path)
+          }));
+
+          // Cập nhật vào Signal
+          this.activePackingOrders.set(mappedOrders);
         }
       },
-      error: (err) => console.error('Failed to load cameras', err)
+      error: (err) => console.error('Không thể tải đơn hàng đang chạy:', err)
     });
+  }
 
-    // Kết nối Socket tổng
-    const token = this.storageService.getItem(environment.ACCESS_TOKEN_KEY);
-    if (token) {
-        this.streamService.connectSocket(token);
+  selectCamera(cam: any) {
+    const prevCam = this.selectedCamera();
+    if (prevCam && prevCam.id === cam.id) return;
+
+    if (prevCam) {
+      this.streamService.toggleCamera(prevCam.id, 'disconnect').subscribe();
+    }
+
+    this.selectedCamera.set(null);
+    this.isLoading.set(true);
+
+    this.streamService.toggleCamera(cam.id, 'connect').subscribe({
+      next: () => {
+        this.selectedCamera.set(cam);
+        this.isLoading.set(false);
+      },
+      error: (err) => {
+        console.error('Lỗi bật camera:', err);
+        this.isLoading.set(false);
+      },
+    });
+  }
+
+  // --- LOGIC SOCKET ---
+  private handleSocketMessage(msg: any) {
+    if (!msg || !msg.event) return;
+
+    if (msg.event === 'ORDER_CREATED') {
+      const data = msg.data || {};
+      const newOrder = {
+        camera_id: msg.camera_id,
+        camera_name: this.cameras().find((c) => c.id === msg.camera_id)?.name || `Cam ${msg.camera_id}`,
+        code: data.code,
+        order_id: data.order_id,
+        start_time: new Date(),
+        avatar: this.resolveAvatar(data.path_avatar || data.avatar),
+      };
+      this.activePackingOrders.update((list) => [newOrder, ...list]);
+
+    } else if (msg.event === 'ORDER_STOPPED') {
+      this.activePackingOrders.update((list) =>
+        list.filter((item) => item.order_id !== msg.data.order_id)
+      );
+
+    } else if (msg.event === 'ORDER_UPDATED') {
+      const data = msg.data || {};
+      const newAvatar = this.resolveAvatar(data.path_avatar || data.avatar);
+
+      this.activePackingOrders.update((list) =>
+        list.map((item) => {
+          if (item.order_id === data.order_id) {
+             return { ...item, avatar: newAvatar || item.avatar };
+          }
+          return item;
+        })
+      );
     }
   }
 
-  // Hàm xử lý khi chọn Dropdown
-  onCameraChange(event: any) {
-    const val = event.target.value;
-    this.selectedCamId.set(Number(val));
-  }
+  // 5️⃣ Helper dùng chung để fix lỗi ảnh 404
+  private resolveAvatar(path: string | null): string | null {
+    if (!path) return null;
+    if (path.startsWith('http')) return path;
 
-  // [MỚI] Hàm xử lý sự kiện từ Camera Widget bắn ra
-  // File HTML đang gọi (onAnalysisComplete)="handleAnalysisComplete($event)" nên bắt buộc phải có hàm này
-  handleAnalysisComplete(result: AnalysisResult) {
-    console.log("Monitor received AI snapshot result:", result);
-    this.analysisResult = result;
-    this.analysisDialogVisible = true; // Mở Dialog lên
-  }
+    // Xử lý path tương đối (OC_System_Data/...)
+    const cleanPath = path.startsWith('/') ? path.substring(1) : path;
+    const apiUrl = environment.apiUrl.endsWith('/') ? environment.apiUrl.slice(0, -1) : environment.apiUrl;
 
-  ngOnDestroy(): void {
-    this.streamService.disconnectSocket();
+    return `${apiUrl}/${cleanPath}`;
   }
 }

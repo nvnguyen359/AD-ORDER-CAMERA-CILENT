@@ -18,6 +18,6 @@ export const routes: Routes = [
   },
    {
     path: 'monitor',
-    loadComponent: () => import('./pages/monitor/monitor').then((m) => m.Monitor),
+    loadComponent: () => import('./pages/monitor/monitor').then((m) => m.MonitorComponent),
   }
 ];

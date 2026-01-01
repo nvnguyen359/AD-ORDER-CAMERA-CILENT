@@ -1,7 +1,7 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { catchError, tap } from 'rxjs/operators';
-import { Observable, throwError, of } from 'rxjs'; // Thêm 'of'
+import { Observable, throwError, of } from 'rxjs';
 import { jwtDecode } from 'jwt-decode';
 import { MessageService } from 'primeng/api';
 import { environment } from '../../environments/environment';
@@ -13,13 +13,11 @@ const ACCESS_TOKEN_KEY = environment.ACCESS_TOKEN_KEY;
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
-  // Dùng inject() cho đồng bộ, bỏ constructor rườm rà
   private http = inject(HttpClient);
   private storageService = inject(StorageService);
   private messageService = inject(MessageService);
   private apiUrl = `${environment.apiUrl}`;
 
-  // Signal: True = Đã đăng nhập, False = Chưa đăng nhập
   isAuthenticated = signal<boolean>(this.checkTokenIsValid());
 
   constructor() {
@@ -28,25 +26,17 @@ export class AuthService {
 
   // --- 1. ĐĂNG KÝ ---
   registerForm(form: any): Observable<any> {
-    // Validate Client-side: Mật khẩu không khớp
     if (form.password !== form.confirmPassword) {
       const msg = `Tạo user: ${form.full_name} thất bại. Mật khẩu không khớp!`;
-
       this.showToast('error', 'Lỗi dữ liệu', msg);
-
-      // Trả về lỗi Observable để component nhận biết (thay vì trả về object form)
       return throwError(() => new Error(msg));
     }
 
-    // Xóa trường thừa trước khi gửi
-    const payload = { ...form }; // Copy ra object mới để tránh sửa form gốc
+    const payload = { ...form };
     delete payload.confirmPassword;
 
     return this.http.post(`${this.apiUrl}/users`, payload).pipe(
       tap((response: any) => {
-        // Chỉ hiện thông báo thành công.
-        // Loading tự tắt do Interceptor.
-        // Lỗi tự hiện do ErrorInterceptor.
         if (response.code === 200) {
            this.showToast(ToastSeverity.SUCCESS, 'Thành công', `Tạo tài khoản ${response.full_name} thành công!`);
         }
@@ -62,20 +52,14 @@ export class AuthService {
 
     return this.http.post<LoginResponse>(`${this.apiUrl}/login`, formData).pipe(
       tap((response) => {
-        // 1. Lưu token
         this.storageService.setItem(ACCESS_TOKEN_KEY, response.access_token);
-
-        // 2. Cập nhật trạng thái Signal (True = Đã Login)
         this.isAuthenticated.set(true);
-
-        // 3. Hiện thông báo (Thêm key: 'global' nếu app.html có set key)
         this.showToast(ToastSeverity.SUCCESS, 'Đăng nhập thành công', `Xin chào ${form.username}`);
-
-      }),catchError((error) => {
+      }),
+      catchError((error) => {
            this.showToast(ToastSeverity.ERROR, 'Đăng nhập thất bại!', `Xin chào ${form.username}`);
         return throwError(() => error);
       })
-
     );
   }
 
@@ -86,12 +70,10 @@ export class AuthService {
     this.showToast('info', 'Đăng xuất', 'Hẹn gặp lại!');
   }
 
-  // --- 4. CHECK TOKEN HỢP LỆ (Logic chuẩn) ---
-  // Trả về TRUE nếu token TỐT (chưa hết hạn)
-  // Trả về FALSE nếu không có token hoặc hết hạn
+  // --- 4. CHECK TOKEN ---
   private checkTokenIsValid(): boolean {
     const token = this.storageService.getItem(ACCESS_TOKEN_KEY);
-    if (!token) return false; // Không có token -> Chưa login
+    if (!token) return false;
 
     try {
       const decoded: any = jwtDecode(token);
@@ -101,21 +83,35 @@ export class AuthService {
         this.storageService.removeItem(ACCESS_TOKEN_KEY);
         return false;
       }
-      return true; // Token còn hạn -> Đã login
+      return true;
     } catch (e) {
       this.storageService.removeItem(ACCESS_TOKEN_KEY);
       return false;
     }
   }
 
-  // Helper hiển thị Toast gọn gàng
+  // --- 5. [FIX] HELPER LẤY USER ID ---
+  // Hàm này giúp các component khác lấy ID người dùng hiện tại
+  getCurrentUserId(): number | null {
+    const token = this.storageService.getItem(ACCESS_TOKEN_KEY);
+    if (!token) return null;
+    try {
+      const decoded: any = jwtDecode(token);
+      // Ưu tiên các key phổ biến
+      return decoded.id || decoded.user_id || (Number(decoded.sub) ? Number(decoded.sub) : null);
+    } catch {
+      return null;
+    }
+  }
+
+  // Helper Toast
   private showToast(severity: 'success' | 'error' | 'info' | 'warn', summary: string, detail: string) {
     this.messageService.add({
       severity,
       summary,
       detail,
       life: 5000,
-      key: 'global' // QUAN TRỌNG: Phải khớp với <p-toast key="global"> bên HTML
+      key: 'global'
     });
   }
 }

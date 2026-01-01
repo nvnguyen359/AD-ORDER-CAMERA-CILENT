@@ -1,28 +1,87 @@
-<div class="dashboard-container">
-  <div class="controls-bar">
-    <h2>🛡️ Smart Surveillance</h2>
+<div class="monitor-layout h-screen flex flex-column md:flex-row overflow-hidden bg-gray-900">
 
-    <div class="mobile-selector" *ngIf="isMobile()">
-      <label>📷 Chọn Cam:</label>
-      <select [value]="selectedCamId()" (change)="onCameraChange($event)">
-        @for (cam of cameras(); track cam.id) {
-          <option [value]="cam.id">{{ cam.name }}</option>
-        }
-      </select>
-    </div>
-
-    </div>
-
-  <div class="camera-grid">
-    @for (cam of visibleCameras(); track cam.id) {
-      <app-camera-widget
-        [cameraId]="cam.id"
-        [cameraName]="cam.name">
-      </app-camera-widget>
-    } @empty {
-      <div class="empty-state">
-        <p>Đang tải camera hoặc không có dữ liệu...</p>
-      </div>
-    }
+  <div class="mobile-stats-header block md:hidden bg-gray-800 border-bottom-1 border-gray-700 p-2">
+    <app-activity-stats></app-activity-stats>
   </div>
+
+  <div class="main-area flex-1 flex flex-column relative min-w-0">
+
+    <div class="camera-selector p-2 flex gap-2 overflow-x-auto border-bottom-1 border-gray-800 bg-black-alpha-50">
+      <button *ngFor="let cam of cameras()"
+              class="p-button p-component p-button-sm white-space-nowrap"
+              [class.p-button-outlined]="selectedCamera()?.id !== cam.id"
+              (click)="selectCamera(cam)">
+        <i class="pi pi-video mr-2"></i>
+        {{ cam.name }}
+      </button>
+    </div>
+
+    <div class="video-container flex-1 bg-black flex align-items-center justify-content-center overflow-hidden">
+      <app-camera-widget
+        *ngIf="selectedCamera()"
+        [cameraId]="selectedCamera().id"
+        [cameraName]="selectedCamera().name"
+        class="w-full">
+      </app-camera-widget>
+    </div>
+  </div>
+
+  <div class="right-sidebar hidden md:flex flex-column w-20rem xl:w-24rem surface-section border-left-1 border-gray-700 shadow-4 z-2">
+
+    <div class="sidebar-header p-3 border-bottom-1 border-gray-800 bg-gray-900">
+      <h3 class="text-gray-300 text-sm font-semibold uppercase mb-3 ml-1">Tổng quan hôm nay</h3>
+      <app-activity-stats></app-activity-stats>
+    </div>
+
+    <div class="sidebar-content flex-1 flex flex-column min-h-0 bg-gray-900">
+      <div class="p-3 pb-0">
+        <h3 class="text-gray-300 text-sm font-semibold uppercase flex align-items-center justify-content-between">
+          <span>🔴 Đang đóng gói</span>
+          <span class="bg-red-500 text-white text-xs px-2 py-1 border-round">{{ activePackingOrders().length }}</span>
+        </h3>
+      </div>
+
+      <p-scrollPanel [style]="{width: '100%', height: '100%'}" styleClass="custom-scroll">
+        <div class="p-3 flex flex-column gap-3">
+
+          <div *ngIf="activePackingOrders().length === 0" class="text-center py-5 text-gray-600">
+            <i class="pi pi-box text-4xl mb-2 opacity-50"></i>
+            <p>Tất cả các line đang chờ...</p>
+          </div>
+
+          <div *ngFor="let order of activePackingOrders()"
+               class="active-card surface-card p-3 border-round shadow-2 border-left-3 border-blue-500 cursor-pointer hover:surface-hover transition-colors"
+               (click)="selectCamera({id: order.camera_id, name: order.camera_name})">
+
+            <div class="flex justify-content-between align-items-center mb-2">
+              <span class="text-xs font-bold text-gray-400">
+                <i class="pi pi-camera mr-1"></i> {{ order.camera_name }}
+              </span>
+              <span class="text-xs bg-blue-500_10 text-blue-500 px-2 border-round">PACKING</span>
+            </div>
+
+            <div class="flex gap-3">
+              <div class="w-4rem h-4rem border-round bg-gray-800 overflow-hidden flex-shrink-0 relative">
+                <img *ngIf="order.avatar" [src]="order.avatar" class="w-full h-full object-cover animate-fade-in">
+                <div *ngIf="!order.avatar" class="w-full h-full flex align-items-center justify-content-center">
+                  <i class="pi pi-spin pi-spinner text-gray-600"></i>
+                </div>
+              </div>
+
+              <div class="flex-1 min-w-0">
+                <div class="font-bold text-lg text-primary white-space-nowrap overflow-hidden text-overflow-ellipsis" [title]="order.code">
+                  {{ order.code }}
+                </div>
+                <div class="text-xs text-gray-500 mt-1">
+                   ID: #{{ order.order_id }}
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </p-scrollPanel>
+    </div>
+  </div>
+
 </div>
