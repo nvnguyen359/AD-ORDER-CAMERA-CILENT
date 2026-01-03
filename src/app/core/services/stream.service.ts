@@ -1,11 +1,13 @@
 import { Injectable, Inject, PLATFORM_ID, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { isPlatformBrowser } from '@angular/common';
-import { Observable, Subject, timer } from 'rxjs';
+import { Observable, Subject } from 'rxjs';
 import { webSocket, WebSocketSubject } from 'rxjs/webSocket';
-import { filter, share, retryWhen, delay, tap, catchError } from 'rxjs/operators';
-import { jwtDecode } from 'jwt-decode'; // [FIX] Import jwt-decode
+import { filter, share, retryWhen, delay, tap } from 'rxjs/operators';
+import { jwtDecode } from 'jwt-decode';
 import { environment } from '../../environments/environment';
+
+// --- INTERFACES ---
 
 export interface StreamMessage {
   camera_id?: number;
@@ -16,6 +18,13 @@ export interface StreamMessage {
   mode?: string;
   error?: string;
   timestamp?: string;
+}
+
+// [MỚI] Interface cho body của API Stop Recording (khớp với ManualStopBody ở Backend)
+export interface StopRecordingBody {
+  order_code: string;  // Bắt buộc
+  client_id?: number;  // Tùy chọn (User ID)
+  note?: string;       // Tùy chọn
 }
 
 @Injectable({ providedIn: 'root' })
@@ -48,7 +57,7 @@ export class StreamService {
     if (!isPlatformBrowser(this.platformId)) return;
     if (this.socket$ && !this.socket$.closed) return;
 
-    // [FIX QUAN TRỌNG] Giải mã Token để lấy User ID
+    // Giải mã Token để lấy User ID
     let userId: number | null = null;
     if (token) {
       try {
@@ -64,7 +73,7 @@ export class StreamService {
     // Xây dựng URL với user_id
     let url = `${this.wsUrl}?token=${token}`;
 
-    // [FIX] Gửi kèm user_id để Backend SocketManager lưu vào danh sách connection
+    // Gửi kèm user_id để Backend SocketManager lưu vào danh sách connection
     if (userId) url += `&user_id=${userId}`;
     if (cameraId) url += `&camera_id=${cameraId}`;
 
@@ -108,7 +117,7 @@ export class StreamService {
   }
 
   // =================================================================
-  // B. CÁC API HTTP
+  // B. CÁC API HTTP (ĐÃ CẬP NHẬT)
   // =================================================================
 
   getCameras(): Observable<any> {
@@ -119,12 +128,25 @@ export class StreamService {
     return this.http.post(`${this.baseUrl}/${id}/${action}`, {});
   }
 
-  startRecording(id: number): Observable<any> {
-    return this.http.post(`${this.baseUrl}/${id}/manual-start`, {});
+  /**
+   * Bắt đầu ghi hình thủ công.
+   * @param id ID Camera
+   * @param width Độ rộng video (default 640)
+   * @param height Chiều cao video (default 480)
+   */
+  startRecording(id: number, width: number = 640, height: number = 480): Observable<any> {
+    // Backend nhận width/height qua Query Params
+    return this.http.post(`${this.baseUrl}/${id}/manual-start?width=${width}&height=${height}`, {});
   }
 
-  stopRecording(id: number): Observable<any> {
-    return this.http.post(`${this.baseUrl}/${id}/manual-stop`, {});
+  /**
+   * Dừng ghi hình và lưu đơn hàng.
+   * @param id ID Camera
+   * @param body Object chứa order_code, client_id, note
+   */
+  stopRecording(id: number, body: StopRecordingBody): Observable<any> {
+    // Backend nhận dữ liệu qua Body JSON (ManualStopBody)
+    return this.http.post(`${this.baseUrl}/${id}/manual-stop`, body);
   }
 
   getAIOverlay(id: number): Observable<any[]> {

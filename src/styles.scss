@@ -88,6 +88,7 @@ html, body {
 body {
     /* Padding nhỏ cho body như yêu cầu, nhưng cẩn thận với layout full màn hình */
     padding: 0px 0 8px 0;
+    overflow-y: hidden;
 }
 
 /* 4. CUSTOM SCROLLBAR (Webkit) - Làm đẹp thanh cuộn */
@@ -171,4 +172,8 @@ input:focus, select:focus {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
     gap: 1rem;
+}
+.p-toast {
+    z-index: 99999 !important;
+    top: 100px!important;
 }

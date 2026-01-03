@@ -29,8 +29,13 @@
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
 }
 
 // Mobile Adjustments
@@ -40,6 +45,13 @@
   }
 
   .main-area {
-    height: 100%; // Chiếm hết phần còn lại
+    height: 100%;
+  }
+
+}
+
+@media screen and (min-width:769px) {
+  .main-area {
+    height: calc(100% - 100px);
   }
 }
