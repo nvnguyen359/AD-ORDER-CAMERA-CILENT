@@ -11,11 +11,12 @@ import { loadingInterceptor } from './core/interceptors/loading.interceptor';
 import { errorInterceptor } from './core/interceptors/error.interceptor';
 // 👇 1. Import AuthInterceptor vừa tạo
 import { authInterceptor } from './core/interceptors/auth.interceptor';
+import { provideAnimations } from '@angular/platform-browser/animations';
 
 export const appConfig: ApplicationConfig = {
   providers: [
     provideRouter(routes),
-    provideAnimationsAsync(),
+    provideAnimations(),
 
     // 👇 2. Đăng ký authInterceptor vào đây
     // Thứ tự rất quan trọng: Auth -> Loading -> Error

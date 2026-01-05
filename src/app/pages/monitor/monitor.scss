@@ -10,12 +10,12 @@
 }
 
 .monitor-layout {
-  // Fix chiều cao 100vh và bg tối
-  background-color: #0f172a; // Slate-900
+  // Fix chiều cao 100vh và đặt màu nền chung (Slate-900)
+  background-color: transparent;
 }
 
 .active-card {
-  background-color: #1e293b; // Slate-800
+  // Slate-800
   transition: transform 0.2s;
 
   &:hover {
@@ -44,10 +44,35 @@
     flex-direction: column;
   }
 
-  .main-area {
-    height: 100%;
+  // [NÂNG CẤP] Ép app-activity-stats hiển thị 1 dòng ngang
+  ::ng-deep .mobile-stats-header {
+    // Can thiệp vào grid/flex container bên trong component con
+    app-activity-stats > div,
+    .grid {
+      display: flex !important;
+      flex-direction: row !important;
+      flex-wrap: nowrap !important;
+      overflow-x: auto !important; // Cho phép vuốt ngang nếu tràn
+      gap: 10px;
+
+      // Đảm bảo các item không bị co quá nhỏ
+      > div, .col-12, .col-6 {
+        flex: 0 0 auto !important;
+        width: auto !important;
+        min-width: 45%; // Hiển thị khoảng 2 item rưỡi trên màn hình
+      }
+    }
   }
 
+  .main-area {
+    height: 100%;
+    // Không set background riêng, ăn theo monitor-layout
+  }
+
+  .video-container {
+    // Đảm bảo trong suốt hoặc cùng màu nền chung
+    background-color: transparent;
+  }
 }
 
 @media screen and (min-width:769px) {

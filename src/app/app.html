@@ -4,12 +4,11 @@
   <header class="header-desktop shadow-1">
     <div class="container">
       <div class="header-left">
-        <p-button icon="pi pi-bars" (click)="visible = true" [text]="true" severity="secondary" styleClass="hamburger-btn"></p-button>
+        <p-button icon="pi pi-bars" (click)="visible = true" [text]="true"  styleClass="hamburger-btn" class="ham"></p-button>
         <div class="logo-text"><span>MyApp</span></div>
       </div>
-
       <div class="header-search">
-       <app-box-search></app-box-search>
+        <app-box-search></app-box-search>
       </div>
     </div>
   </header>
@@ -17,21 +16,20 @@
   <p-drawer [(visible)]="visible" header="Menu">
       <div class="drawer-content">
           <ul class="drawer-list">
-              <li *ngFor="let item of menuItems">
+              <li *ngFor="let item of drawerMenuItems">
                   <ng-container *ngIf="item.routerLink; else actionItem">
-                      <a [routerLink]="item.routerLink"
-                         class="drawer-link cursor-pointer"
+                      <a [routerLink]="item.routerLink" class="drawer-link cursor-pointer"
                          [class.active-route]="router.isActive(item.routerLink, false)"
                          (click)="visible = false">
                           <i [class]="item.icon"></i>
                           <span>{{ item.label }}</span>
                       </a>
                   </ng-container>
-
                   <ng-template #actionItem>
-                      <a class="drawer-link cursor-pointer" (click)="handleMenuClick($event, item)">
+                      <a class="drawer-link cursor-pointer"
+                         (click)="item.label === 'Logout' ? authService.logout() : handleMenuClick($event, item)">
                           <i [class]="item.icon"></i>
-                          <span>{{ item.label || 'Action' }}</span>
+                          <span>{{ item.label }}</span>
                       </a>
                   </ng-template>
               </li>
@@ -43,32 +41,47 @@
     <router-outlet></router-outlet>
   </main>
 
+  <div *ngIf="isSpeedDialOpen" class="custom-backdrop" (click)="isSpeedDialOpen = false"></div>
+
   <nav class="mobile-bottom-nav">
     <div class="nav-container w-full h-full flex justify-content-around align-items-center relative">
 
-        <ng-container *ngFor="let item of menuItems">
-
-            <a *ngIf="item.routerLink"
-               [routerLink]="item.routerLink"
-               routerLinkActive="active"
-               [routerLinkActiveOptions]="{exact: true}"
+        <ng-container *ngFor="let item of mobilePrimaryItems">
+            <a *ngIf="item.routerLink" [routerLink]="item.routerLink"
+               routerLinkActive="active" [routerLinkActiveOptions]="{exact: true}"
                class="nav-item cursor-pointer">
-
                <i [class]="item.icon"></i>
                <span class="nav-label">{{ item.label }}</span>
             </a>
-
-            <a *ngIf="!item.routerLink"
-               class="nav-item cursor-pointer nav-item-qr"
+            <a *ngIf="!item.routerLink" class="nav-item cursor-pointer nav-item-qr"
                (click)="handleMenuClick($event, item)">
-
                <i [class]="item.icon"></i>
-               </a>
-
+            </a>
         </ng-container>
+
+        <div class="nav-item more-container" *ngIf="speedDialItems.length > 0">
+
+            <div class="menu-popup-card shadow-4" *ngIf="isSpeedDialOpen" @menuAnimation>
+
+                <div *ngFor="let item of speedDialItems; let last = last"
+                     class="popup-item cursor-pointer"
+                     [class.border-bottom]="!last"
+                     (click)="handleSpeedDialClick(item)">
+                    <i [class]="item.icon" class="popup-icon"></i>
+                    <span class="popup-label">{{ item.label }}</span>
+                </div>
+
+                <div class="popup-arrow"></div>
+            </div>
+
+            <div class="more-btn" (click)="toggleSpeedDial()" [class.active-state]="isSpeedDialOpen">
+                <i class="pi" [ngClass]="isSpeedDialOpen ? 'pi-times' : 'pi-bars'"></i>
+                <span class="nav-label">More</span>
+            </div>
+
+        </div>
 
     </div>
   </nav>
-
 </div>
-<p-toast position="top-center" [baseZIndex]="99999"></p-toast>
+<p-toast position="top-center" [baseZIndex]="99999" key="global"></p-toast>

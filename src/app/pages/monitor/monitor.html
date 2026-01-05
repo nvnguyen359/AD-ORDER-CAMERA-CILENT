@@ -1,12 +1,12 @@
-<div class="monitor-layout h-screen flex flex-column md:flex-row overflow-hidden bg-gray-900">
+<div class="monitor-layout h-screen flex flex-column md:flex-row overflow-hidden ">
 
-  <div class="mobile-stats-header block md:hidden bg-gray-800 border-bottom-1 border-gray-700 p-2">
+  <div class="mobile-stats-header block md:hidden p-2">
     <app-activity-stats></app-activity-stats>
   </div>
 
   <div class="main-area flex-1 flex flex-column relative min-w-0 min-h-0">
 
-    <div class="camera-selector p-2 flex gap-2 overflow-x-auto border-bottom-1 border-gray-800 bg-black-alpha-50 flex-shrink-0">
+    <div class="camera-selector p-2 flex gap-2 overflow-x-auto border-bottom-1  flex-shrink-0">
       <button *ngFor="let cam of cameras()"
               class="p-button p-component p-button-sm white-space-nowrap"
               [class.p-button-outlined]="selectedCamera()?.id !== cam.id"
@@ -16,7 +16,7 @@
       </button>
     </div>
 
-    <div class="video-container flex-1 bg-black flex align-items-center justify-content-center overflow-hidden min-h-0 relative">
+    <div class="video-container flex-1 flex align-items-center justify-content-center overflow-hidden min-h-0 relative">
       <app-camera-widget
         *ngIf="selectedCamera()"
         [cameraId]="selectedCamera().id"
@@ -27,12 +27,12 @@
 
   <div class="right-sidebar hidden md:flex flex-column w-20rem xl:w-30rem surface-section border-left-1 border-gray-700 shadow-4 z-2">
 
-    <div class="sidebar-header p-3 border-bottom-1 border-gray-800 bg-gray-900">
+    <div class="sidebar-header p-3 border-bottom-1  ">
       <h3 class="text-gray-300 text-sm font-semibold uppercase mb-3 ml-1">Tổng quan hôm nay</h3>
       <app-activity-stats></app-activity-stats>
     </div>
 
-    <div class="sidebar-content flex-1 flex flex-column min-h-0 bg-gray-900">
+    <div class="sidebar-content flex-1 flex flex-column min-h-0 ">
       <div class="p-3 pb-0">
         <h3 class="text-gray-300 text-sm font-semibold uppercase flex align-items-center justify-content-between">
           <span>🔴 Đang đóng gói</span>

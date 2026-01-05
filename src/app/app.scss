@@ -1,354 +1,139 @@
-/* =========================================
-   1. VARIABLES & HOST SETUP
-   ========================================= */
+
 :host {
-  /* Màu chủ đạo (Xanh dương) */
   --primary-color: #3B82F6;
-
-  /* Kích thước */
-  --header-height: 60px;       /* Chiều cao Header */
-  --bottom-nav-height: 60px;   /* Chiều cao Menu dưới (Mobile) */
-  --top-accent-height: 4px;    /* Chiều cao dải màu trang trí trên cùng */
-
-  display: block;
-  height: 100%;
+  --header-height: 60px;
+  --bottom-nav-height: 60px;
+  --top-accent-height: 4px;
+  display: block; height: 100%;
 }
 
-/* =========================================
-   2. APP LAYOUT & GLOBAL RESET
-   ========================================= */
-.app {
-  display: flex;
-  flex-direction: column;
-  min-height: 100vh;
-  background-color: #f8fafc; /* Màu nền xám rất nhẹ cho toàn app */
-}
-
-/* Dải màu Gradient trang trí trên cùng */
-.top-accent-bar {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: var(--top-accent-height);
-  background: linear-gradient(90deg, var(--primary-color), #8B5CF6);
-  z-index: 1001; /* Cao hơn Header */
-}
-
-/* =========================================
-   3. HEADER DESKTOP (NAVIGATION)
-   ========================================= */
+.app { display: flex; flex-direction: column; min-height: 100vh; background-color: #f8fafc; }
+.top-accent-bar { position: fixed; top: 0; left: 0; width: 100%; height: var(--top-accent-height); background: linear-gradient(90deg, var(--primary-color), #8B5CF6); z-index: 1001; }
 .header-desktop {
-  position: fixed;
-  top: var(--top-accent-height); /* Nằm ngay dưới dải màu */
-  left: 0;
-  width: 100%;
-  height: var(--header-height);
-
-  /* Màu nền & Shadow chuẩn */
-  background-color: var(--primary-color);
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
-              0 2px 4px -1px rgba(0, 0, 0, 0.06);
-
-  z-index: 500;
-  display: flex;
-  align-items: center;
-  padding: 0 1rem;
-  transition: all 0.3s ease;
-
-  /* Container giới hạn chiều rộng nội dung (để không bị quá bè trên màn to) */
-  .container {
-    width: 100%;
-    max-width: 1440px;
-    margin: 0 auto;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 1rem;
-  }
+  position: fixed; top: var(--top-accent-height); left: 0; width: 100%; height: var(--header-height); background-color: var(--primary-color); z-index: 500; display: flex; align-items: center; padding: 0 1rem; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+  .container { width: 100%; max-width: 1440px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
 }
-
-/* --- KHỐI TRÁI: Hamburger Menu + Logo --- */
-.header-left {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  flex-shrink: 0;
-
-  /* Nút Menu */
-  .hamburger-btn {
-    color: #ffffff !important;
-    width: 40px;
-    height: 40px;
-    border-radius: 50%; /* Bo tròn nút */
-
-    &:hover {
-      background-color: rgba(255, 255, 255, 0.2) !important;
-    }
-  }
-
-  /* Logo Text */
-  .logo-text {
-    span {
-      font-size: 1.25rem;
-      font-weight: 800;
-      color: #ffffff;
-      letter-spacing: 0.5px;
-      text-transform: uppercase;
-      white-space: nowrap;
-      text-shadow: 0 1px 2px rgba(0,0,0,0.1);
-    }
-  }
-}
-
-/* --- KHỐI PHẢI: Thanh tìm kiếm (Box Search) --- */
-.header-search {
-  flex-grow: 1;
-  display: flex;
-  justify-content: flex-end; /* Căn phải */
-  max-width: 600px;          /* Giới hạn độ rộng tối đa */
-
-  /* Đảm bảo component con BoxSearch fill đầy */
-  app-box-search {
-    width: 100%;
-    display: block;
-  }
-}
+.header-left { display: flex; align-items: center; gap: 0.75rem; flex-shrink: 0; .hamburger-btn { color: white !important; width: 40px; height: 40px; border-radius: 50%; &:hover { background-color: rgba(255,255,255,0.2) !important; } } .logo-text span { font-size: 1.25rem; font-weight: 800; color: white; text-transform: uppercase; } }
+.header-search { flex-grow: 1; display: flex; justify-content: flex-end; max-width: 600px; app-box-search { width: 100%; display: block; } }
+.main-content { flex-grow: 1; width: 100%; max-width: 1440px; margin: 0 auto; padding-top: calc(var(--header-height) + var(--top-accent-height) + 16px); padding-bottom: 20px; padding-left: 1rem; padding-right: 1rem; overflow-y: auto; height: 80vh; }
+.drawer-list { list-style: none; padding: 0; margin: 0; li { margin-bottom: 0.5rem; } .drawer-link { display: flex; align-items: center; gap: 12px; padding: 12px 16px; color: #374151; text-decoration: none; border-radius: 8px; font-weight: 500; transition: background 0.2s; i { font-size: 1.2rem; color: #6b7280; } &:hover, &.active-route { background-color: #eff6ff; color: var(--primary-color); i { color: var(--primary-color); } } } }
 
 /* =========================================
-   4. MAIN CONTENT AREA
-   ========================================= */
-.main-content {
-  flex-grow: 1;
-  width: 100%;
-  max-width: 1440px;
-  margin: 0 auto;
-
-  /* Padding Top = Header Height + Top Accent + khoảng hở */
-  padding-top: calc(var(--header-height) + var(--top-accent-height) + 16px);
-  padding-bottom: 20px;
-  padding-left: 1rem;
-  padding-right: 1rem;
-  overflow-y: auto;
-    height: 80vh;
-    width: 100%;
-}
-
-/* =========================================
-   5. DRAWER (SIDE MENU) STYLES
-   ========================================= */
-.drawer-list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-
-  li {
-    margin-bottom: 0.5rem;
-  }
-
-  .drawer-link {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 12px 16px;
-    color: #374151;
-    text-decoration: none;
-    border-radius: 8px;
-    transition: background 0.2s;
-    font-weight: 500;
-
-    i {
-      font-size: 1.2rem;
-      color: #6b7280;
-    }
-
-    &:hover {
-      background-color: #eff6ff;
-      color: var(--primary-color);
-
-      i { color: var(--primary-color); }
-    }
-  }
-}
-
-/* =========================================
-   6. MOBILE BOTTOM NAVIGATION
+   MOBILE BOTTOM NAV
    ========================================= */
 .mobile-bottom-nav {
-  display: none; /* Mặc định ẩn trên Desktop */
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  width: 100%;
-  height: var(--bottom-nav-height);
-  background: #ffffff;
-  border-top: 1px solid #e5e7eb;
-  z-index: 1000;
-  justify-content: space-around;
-  align-items: center;
-  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.03);
-
-  .nav-item {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    text-decoration: none;
-    color: #9ca3af;
-    font-size: 0.75rem;
-    gap: 4px;
-    padding: 6px;
-    border-radius: 8px;
-    width: 100%;
-
-    i {
-      font-size: 1.3rem;
-      margin-bottom: 2px;
-    }
-
-    &.active {
-      color: var(--primary-color);
-      font-weight: 600;
-
-      i { transform: scale(1.1); transition: transform 0.2s; }
-    }
-  }
-}
-
-/* =========================================
-   7. GLOBAL UTILS (Loader, Toast)
-   ========================================= */
-.global-loader-overlay {
-  position: fixed;
-  top: 0; left: 0;
-  width: 100vw; height: 100vh;
-  z-index: 9999;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  background-color: rgba(255, 255, 255, 0.5); /* Nền mờ nhẹ */
-}
-
-/* Toast đè lên mọi thứ */
-::ng-deep .p-toast {
-  z-index: 99999 !important;
-}
-
-/* =========================================
-   8. RESPONSIVE MEDIA QUERIES
-   ========================================= */
-
-/* Màn hình Mobile/Tablet nhỏ (<= 768px) */
-@media (max-width: 768px) {
-  /* Điều chỉnh Header */
-  .header-desktop {
-    padding: 0 0.5rem;
-
-    .container {
-      gap: 0.5rem; /* Giảm khoảng cách các phần tử */
-    }
-
-    /* Ẩn chữ Logo để nhường chỗ cho Search */
-    .header-left .logo-text {
-      display: none;
-    }
-
-    /* Search Bar chiếm full chiều rộng còn lại */
-    .header-search {
-      max-width: 100%;
-      margin-left: 0.5rem;
-    }
-  }
-
-  /* Hiện Menu dưới */
-  .mobile-bottom-nav {
-    display: flex;
-  }
-
-  /* Main Content tránh Menu dưới */
-  .main-content {
-    padding-bottom: calc(var(--bottom-nav-height) + 20px);
-  }
-}
-.btn-ac{
-  pointer-events: visible;
-  cursor: pointer;
-}
-/* --- MOBILE BOTTOM NAV --- */
-.mobile-bottom-nav {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    width: 100%;
-    height: 60px; /* Chiều cao thanh menu */
-    background-color: #ffffff;
-    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
-    z-index: 1000;
-    padding-bottom: env(safe-area-inset-bottom);
+  display: none; position: fixed; bottom: 0; left: 0; width: 100%; height: var(--bottom-nav-height);
+  background: #ffffff; border-top: 1px solid #e5e7eb;
+  z-index: 2000;
+  justify-content: space-around; align-items: center; padding-bottom: env(safe-area-inset-bottom);
+  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
 }
 
 .nav-item {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    text-decoration: none;
-    color: #64748b;
-    flex: 1; /* Chia đều không gian */
-    height: 100%;
-    transition: all 0.2s ease;
-
-    i {
-        font-size: 1.4rem;
-        margin-bottom: 2px;
-    }
-
-    .nav-label {
-        font-size: 0.7rem;
-        font-weight: 600;
-    }
-
-    &.active {
-        color: var(--primary-color);
-        i { transform: translateY(-2px); }
-    }
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  text-decoration: none; color: #64748b; flex: 1; height: 100%; position: relative; transition: all 0.2s ease;
+  i { font-size: 1.4rem; margin-bottom: 4px; }
+  .nav-label { font-size: 0.7rem; font-weight: 600; line-height: 1; }
+  &.active { color: var(--primary-color); i { transform: translateY(-2px); } }
 }
-
 
 .nav-item-qr {
-    /* Kích thước nút tròn */
-    width: 56px !important;
-    height: 56px !important;
-    flex: none !important; /* Không giãn theo flex */
-
-    /* Màu sắc nổi bật */
-    background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
-    color: white !important;
-
-    /* [QUAN TRỌNG] Bo tròn 50% để thành hình tròn hoàn hảo */
-    border-radius: 50% !important;
-
-    /* Hiệu ứng bóng và viền */
-    box-shadow: 0 -4px 4px rgba(255, 255, 255, 0.877);
-    border: 4px solid var(--surface-ground); /* Viền trùng màu nền để tạo khoảng cách */
-
-    /* Vị trí nổi lên */
-    margin-top: -30px;
-
-    /* Căn giữa icon */
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    /* Icon to hơn */
-    i {
-        font-size: 1.8rem !important;
-        margin: 0 !important;
-    }
-
-    /* Hiệu ứng nhấn */
-    &:active {
-        transform: scale(0.95);
-        box-shadow: 0 0 0 rgba(0,0,0,0);
-    }
+  width: 56px !important; height: 56px !important; flex: none !important;
+  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+  color: white !important; border-radius: 50% !important;
+  box-shadow: 0 -4px 10px rgba(34, 197, 94, 0.3); border: 4px solid #f8fafc; margin-top: -30px;
+  display: flex; align-items: center; justify-content: center;
+  i { font-size: 1.8rem !important; margin: 0 !important; }
+  &:active { transform: scale(0.95); box-shadow: none; }
 }
+
+/* =========================================
+   CUSTOM POPUP MENU (OPTIMIZED SMOOTHNESS)
+   ========================================= */
+
+.custom-backdrop {
+  position: fixed; inset: 0; background: rgba(0, 0, 0, 0.3); z-index: 1999;
+  backdrop-filter: blur(2px); animation: fadeIn 0.25s ease-out;
+}
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+.more-container {
+  position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; flex: 1; height: 100%;
+
+  .more-btn {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    width: 100%; height: 100%; cursor: pointer; color: #64748b; transition: color 0.2s;
+    i { font-size: 1.4rem; margin-bottom: 4px; transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1); }
+    .nav-label { font-size: 0.7rem; font-weight: 600; line-height: 1; }
+
+    &.active-state { color: var(--primary-color); i { transform: rotate(45deg); font-size: 1.6rem; } }
+  }
+}
+
+/* CARD MENU */
+.menu-popup-card {
+  /* Vị trí */
+  position: absolute;
+  bottom: 75px;
+  left: 50%; transform: translateX(-45%);
+  width: 210px;
+
+  /* Giao diện */
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px); /* Kính mờ */
+  border-radius: 16px;
+  box-shadow: 0 15px 35px -5px rgba(0,0,0,0.2), 0 5px 15px -5px rgba(0,0,0,0.1); /* Bóng sâu hơn */
+  border: 1px solid rgba(255,255,255,0.6);
+
+  display: flex; flex-direction: column;
+  z-index: 2001;
+  overflow: hidden;
+
+  /* [QUAN TRỌNG] Tối ưu hiệu năng Animation */
+  will-change: transform, opacity;
+  transform-origin: bottom center;
+
+  .popup-arrow {
+    position: absolute; bottom: -7px; left: 50%; margin-left: -7px;
+    width: 14px; height: 14px;
+    background: white;
+    transform: rotate(45deg);
+    border-bottom: 1px solid rgba(0,0,0,0.05);
+    border-right: 1px solid rgba(0,0,0,0.05);
+    z-index: -1;
+  }
+}
+
+/* POPUP ITEM */
+.popup-item {
+  display: flex; align-items: center; gap: 14px;
+  padding: 16px 20px;
+  background: transparent;
+  transition: background 0.15s ease-out;
+  color: #1e293b;
+  position: relative;
+
+  .popup-icon { font-size: 1.3rem; color: var(--primary-color); width: 24px; text-align: center; }
+  .popup-label { font-size: 0.95rem; font-weight: 600; }
+
+  /* Hiệu ứng khi bấm */
+  &:active { background-color: rgba(59, 130, 246, 0.1); color: var(--primary-color); }
+
+  &.border-bottom::after {
+    content: ''; position: absolute; bottom: 0; left: 16px; right: 16px;
+    height: 1px; background: rgba(0,0,0,0.05);
+  }
+}
+
+@media (max-width: 768px) {
+  .header-desktop { padding: 0 0.5rem; .header-left .logo-text { display: none; } }
+  .mobile-bottom-nav { display: flex; }
+  .main-content { padding-bottom: calc(var(--bottom-nav-height) + 20px); height: auto; }
+}
+.global-loader-overlay {
+  position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+  z-index: 9999; display: flex; justify-content: center; align-items: center;
+  background-color: rgba(255, 255, 255, 0.5);
+}
+::ng-deep .p-toast { z-index: 99999 !important; }
+.btn-ac { pointer-events: visible; cursor: pointer; }
