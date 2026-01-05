@@ -25,6 +25,7 @@ export class AuthService {
 
   // [MỚI] Biến lưu URL để quay lại sau khi login thành công
   public redirectUrl: string | null = null;
+  isAdmin = signal<boolean>(false);
 
   constructor() {
     console.log('Auth Status:', this.isAuthenticated() ? 'Logged In' : 'Guest');

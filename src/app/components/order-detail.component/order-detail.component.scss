@@ -1,0 +1,184 @@
+:host {
+    display: block;
+    height: 100%;
+}
+
+.detail-wrapper {
+    min-height: 0;
+    background-color: #f8fafc;
+}
+
+/* Custom Scrollbar */
+.custom-scrollbar {
+    &::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+    }
+    &::-webkit-scrollbar-track {
+        background: transparent;
+    }
+    &::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 4px;
+        &:hover {
+            background: #94a3b8;
+        }
+    }
+}
+.list-xxx{
+  height: 60vh;
+}
+/* --- [FIX] VIDEO AREA --- */
+.video-area {
+    background-color: #000;
+
+    /* Desktop: Cố định chiều cao theo tỷ lệ màn hình */
+    height: 60vh;
+    min-height: 400px; /* Không bé quá */
+    max-height: 800px; /* Không to quá */
+
+    /* Quan trọng: Không cho tự giãn hết phần còn lại */
+    flex-grow: 0;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    video {
+        outline: none;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        max-width: 100%;
+        max-height: 100%;
+    }
+}
+
+/* --- Info Bar --- */
+.info-bar {
+    background-color: #ffffff;
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    z-index: 2;
+}
+
+/* --- Timeline --- */
+.timeline-container {
+    background-color: #f1f5f9;
+    box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.06);
+    white-space: nowrap;
+
+    /* Đảm bảo timeline chiếm phần còn lại nhưng có thể cuộn nếu cần */
+    flex-grow: 1;
+    overflow-y: auto;
+}
+
+.timeline-node {
+    user-select: none;
+    min-width: 160px;
+    background-color: #ffffff;
+    transition: all 0.2s ease-in-out;
+    border: 1px solid transparent;
+
+    &.opacity-70 {
+        opacity: 0.7;
+        &:hover {
+            opacity: 1;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+    }
+
+    &.border-primary {
+        border-color: var(--primary-color) !important;
+        background-color: #eff6ff;
+        box-shadow: 0 0 0 1px var(--primary-color);
+
+        .active-indicator {
+            position: absolute;
+            top: -6px;
+            left: 50%;
+            transform: translateX(-50%);
+            border-left: 6px solid transparent;
+            border-right: 6px solid transparent;
+            border-bottom: 6px solid var(--primary-color);
+            z-index: 10;
+        }
+    }
+}
+
+/* --- Sidebar List --- */
+.group {
+    &:hover {
+        background-color: #f8fafc;
+        border-color: #cbd5e1 !important;
+    }
+
+    &.bg-blue-50 {
+        background-color: #eff6ff !important;
+        border-color: var(--primary-color) !important;
+    }
+}
+
+/* --- Animations --- */
+.rotate-90 {
+    transform: rotate(90deg);
+}
+
+.playing-bars {
+    height: 12px;
+    display: flex;
+    align-items: flex-end;
+    gap: 2px;
+
+    .bar {
+        width: 4px;
+        background-color: var(--primary-color);
+        animation: sound 0.5s ease-in-out infinite alternate;
+        border-radius: 2px;
+    }
+    .bar:nth-child(1) { height: 6px; animation-duration: 0.4s; }
+    .bar:nth-child(2) { height: 10px; animation-duration: 0.5s; }
+    .bar:nth-child(3) { height: 8px; animation-duration: 0.6s; }
+}
+
+@keyframes sound {
+    0% { height: 4px; opacity: 0.6; }
+    100% { height: 100%; opacity: 1; }
+}
+
+/* --- Responsive --- */
+@media (max-width: 991px) {
+    .detail-wrapper {
+        overflow-y: auto !important;
+    }
+
+    .flex-grow-1.lg\:flex-row {
+        flex-direction: column !important;
+    }
+
+    /* Mobile: Video nhỏ lại chút */
+    .video-area {
+        height: auto !important;
+        min-height: 35vh;
+        flex-grow: 0;
+    }
+
+    .lg\:w-9 {
+        width: 100% !important;
+        flex: none !important;
+    }
+
+    .lg\:w-3 {
+        width: 100% !important;
+        height: auto !important;
+        min-height: 400px;
+        border-left: none !important;
+        border-top: 1px solid #e2e8f0;
+    }
+}
+
+/* Utility */
+.p-dialog-title {
+  color: #1e293b !important;
+}
+.align-items-center {
+  align-items: center;
+}

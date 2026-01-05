@@ -9,16 +9,74 @@
   .sm\:flex { display: flex !important; }
 }
 
-/* AutoComplete Customization */
+/* --- SEARCH GROUP STYLES (Pill Shape) --- */
+.search-group {
+  background-color: #f1f5f9; /* Nền xám nhẹ */
+  border-radius: 999px;      /* Bo tròn viên thuốc */
+  border: 1px solid transparent;
+  transition: all 0.2s ease;
+  padding: 2px 4px;
+  display: flex;
+  align-items: center;
+  width: 100%;
+
+  /* Hiệu ứng khi focus vào trong */
+  &:focus-within {
+    background-color: #ffffff;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+  }
+
+  /* Icon search */
+  i.pi-search {
+    font-size: 1rem;
+  }
+}
+
+/* --- OVERRIDE PRIMENG --- */
 :host ::ng-deep {
+
+  /* AutoComplete trong suốt */
   .p-autocomplete {
-    flex: 1; /* Chiếm hết chiều rộng */
+    flex: 1;
+    width: 100%;
   }
 
   .p-autocomplete-input {
     width: 100%;
+    background: transparent !important;
+    box-shadow: none !important;
+    border: none !important;
+    padding-left: 0.5rem !important;
+    font-size: 1rem;
+
+    &:focus {
+      outline: none;
+    }
   }
 
+  /* Dropdown Panel kết quả */
+  .p-autocomplete-panel {
+    border-radius: 12px !important;
+    margin-top: 8px !important;
+    box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.15) !important;
+    border: 1px solid #e2e8f0 !important;
+  }
+
+  .p-autocomplete-items {
+    padding: 6px !important;
+  }
+
+  .p-autocomplete-item {
+    border-radius: 8px !important;
+    margin-bottom: 2px !important;
+
+    &.p-focus {
+      background-color: #eff6ff !important;
+    }
+  }
+
+  /* DatePicker Trigger Icon (nếu có) */
   .p-datepicker-trigger {
     background-color: transparent;
     color: var(--text-color-secondary);
@@ -26,18 +84,15 @@
   }
 }
 
-/* --- HIGHLIGHT STYLES --- */
-// Class này sẽ được apply vào trong innerHTML của AutoComplete item
+/* --- HIGHLIGHT TEXT --- */
 .highlight-match {
-  font-weight: 700 !important;   /* In đậm phần tìm thấy */
-  color: var(--primary-color) !important; /* Màu chủ đạo */
+  font-weight: 800 !important;
+  color: var(--primary-color) !important;
+  background-color: rgba(59, 130, 246, 0.1);
+  padding: 0 2px;
+  border-radius: 2px;
 }
 
-/* Override font-weight mảnh (300) nếu class PrimeFlex chưa có */
 .font-light {
   font-weight: 300 !important;
-}
-.input-search{
-  display: flex;
-  position: relative;
 }

@@ -1,44 +1,74 @@
 <div class="app">
   <div class="top-accent-bar"></div>
 
-<header class="header-desktop">
-  <div class="container">
-    <p-button
-      icon="pi pi-bars"
-      (click)="visible = true"
-      text="true"
-      severity="secondary"
-      styleClass="hamburger-btn">
-    </p-button>
-    <span class="logo-text">MyApp</span>
-  </div>
-</header>
+  <header class="header-desktop shadow-1">
+    <div class="container">
+      <div class="header-left">
+        <p-button icon="pi pi-bars" (click)="visible = true" [text]="true" severity="secondary" styleClass="hamburger-btn"></p-button>
+        <div class="logo-text"><span>MyApp</span></div>
+      </div>
 
-<p-drawer [(visible)]="visible" header="Menu" >
-    <div class="drawer-content">
-        <ul class="drawer-list">
-            <li *ngFor="let item of menuItems">
-                <a [routerLink]="item.routerLink" class="drawer-link" (click)="visible = false">
-                    <i [class]="item.icon"></i>
-                    <span>{{ item.label }}</span>
-                </a>
-            </li>
-        </ul>
+      <div class="header-search">
+       <app-box-search></app-box-search>
+      </div>
     </div>
-</p-drawer>
+  </header>
 
-<main class="main-content">
-  <router-outlet></router-outlet>
-</main>
+  <p-drawer [(visible)]="visible" header="Menu">
+      <div class="drawer-content">
+          <ul class="drawer-list">
+              <li *ngFor="let item of menuItems">
+                  <ng-container *ngIf="item.routerLink; else actionItem">
+                      <a [routerLink]="item.routerLink"
+                         class="drawer-link cursor-pointer"
+                         [class.active-route]="router.isActive(item.routerLink, false)"
+                         (click)="visible = false">
+                          <i [class]="item.icon"></i>
+                          <span>{{ item.label }}</span>
+                      </a>
+                  </ng-container>
 
-<nav class="mobile-bottom-nav">
-  <a *ngFor="let item of menuItems"
-     [routerLink]="item.routerLink"
-     routerLinkActive="active"
-     class="nav-item">
-    <i [class]="item.icon"></i>
-    <span class="nav-label">{{ item.label }}</span>
-  </a>
-</nav>
+                  <ng-template #actionItem>
+                      <a class="drawer-link cursor-pointer" (click)="handleMenuClick($event, item)">
+                          <i [class]="item.icon"></i>
+                          <span>{{ item.label || 'Action' }}</span>
+                      </a>
+                  </ng-template>
+              </li>
+          </ul>
+      </div>
+  </p-drawer>
+
+  <main class="main-content">
+    <router-outlet></router-outlet>
+  </main>
+
+  <nav class="mobile-bottom-nav">
+    <div class="nav-container w-full h-full flex justify-content-around align-items-center relative">
+
+        <ng-container *ngFor="let item of menuItems">
+
+            <a *ngIf="item.routerLink"
+               [routerLink]="item.routerLink"
+               routerLinkActive="active"
+               [routerLinkActiveOptions]="{exact: true}"
+               class="nav-item cursor-pointer">
+
+               <i [class]="item.icon"></i>
+               <span class="nav-label">{{ item.label }}</span>
+            </a>
+
+            <a *ngIf="!item.routerLink"
+               class="nav-item cursor-pointer nav-item-qr"
+               (click)="handleMenuClick($event, item)">
+
+               <i [class]="item.icon"></i>
+               </a>
+
+        </ng-container>
+
+    </div>
+  </nav>
+
 </div>
-<p-toast key="global" position="top-right" [baseZIndex]="99999"></p-toast>
+<p-toast position="top-center" [baseZIndex]="99999"></p-toast>

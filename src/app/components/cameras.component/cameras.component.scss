@@ -1,0 +1,46 @@
+:host {
+    display: block;
+    height: 100%;
+}
+
+::ng-deep .p-datatable {
+    .p-datatable-header {
+        background: transparent;
+        border: none;
+    }
+
+    // Căn chỉnh nội dung table
+    td {
+        vertical-align: middle;
+    }
+}
+
+// Responsive cho mobile
+@media screen and (max-width: 768px) {
+    .flex-row {
+        flex-direction: column;
+    }
+}
+:host {
+    display: block;
+    height: 100%;
+}
+
+.camera-card {
+    border: 1px solid var(--surface-border);
+    // Viền trái dày 4px để chỉ trạng thái
+    border-left-width: 4px !important;
+
+    // Hiệu ứng hover nổi lên
+    &:hover {
+        transform: translateY(-2px);
+    }
+}
+
+// Custom Skeleton cho đẹp
+p-skeleton {
+    background-color: var(--surface-200);
+}
+.border-left-3 { border-left-width: 5px !important; }
+.camera-card:hover { transform: translateY(-3px); }
+::ng-deep .p-tag { font-size: 10px; padding: 2px 8px; }

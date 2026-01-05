@@ -1,0 +1,211 @@
+<div class="dashboard-wrapper surface-ground">
+
+    <div class="sticky-header">
+        <div class="flex flex-column md:flex-row justify-content-between align-items-center gap-2">
+
+            <div class="w-full md:w-auto flex justify-content-between align-items-center mb-1 md:mb-0">
+                <div>
+                    <h1 class="text-lg md:text-2xl font-bold m-0 text-900">Hiệu Suất Vận Hành</h1>
+                    <span class="text-sm text-500 hidden md:inline">Giám sát đóng gói & ghi hình</span>
+                </div>
+                <button pButton icon="pi pi-refresh" class="md:hidden p-button-text p-button-rounded text-green-500" (click)="loadDashboardData(selectedRange)"></button>
+            </div>
+
+            <div class="w-full md:w-auto bg-white p-1 border-round-3xl shadow-1 flex align-items-center relative">
+
+                <div class="overflow-x-auto flex gap-1 flex-1 px-1 custom-scrollbar" style="white-space: nowrap;">
+                    <button pButton label="Hôm nay" class="p-button-rounded p-button-sm border-none flex-shrink-0"
+                            [ngClass]="selectedRange === 'today' ? 'bg-green-500 text-white font-bold' : 'bg-transparent text-500 hover:surface-100'"
+                            (click)="loadDashboardData('today')"></button>
+
+                    <button pButton label="Hôm qua" class="p-button-rounded p-button-sm border-none flex-shrink-0"
+                            [ngClass]="selectedRange === 'yesterday' ? 'bg-green-500 text-white font-bold' : 'bg-transparent text-500 hover:surface-100'"
+                            (click)="loadDashboardData('yesterday')"></button>
+
+                    <button pButton label="15 ngày" class="p-button-rounded p-button-sm border-none flex-shrink-0"
+                            [ngClass]="selectedRange === '15days' ? 'bg-green-500 text-white font-bold' : 'bg-transparent text-500 hover:surface-100'"
+                            (click)="loadDashboardData('15days')"></button>
+                </div>
+
+                <div class="w-1px surface-300 h-1rem mx-1"></div>
+
+                <div class="flex-shrink-0 flex gap-1 pr-1">
+                    <button pButton icon="pi pi-filter" class="p-button-rounded p-button-sm border-none"
+                            [ngClass]="['month', 'quarter', 'year', 'custom'].includes(selectedRange) ? 'bg-green-500 text-white' : 'bg-transparent text-500 hover:surface-100'"
+                            (click)="toggleFilterMenu()"></button>
+
+                    <button pButton icon="pi pi-refresh" class="hidden md:flex p-button-text p-button-rounded p-button-sm text-green-500" (click)="loadDashboardData(selectedRange)"></button>
+                </div>
+
+                <div *ngIf="isFilterMenuOpen" class="fixed top-0 left-0 w-full h-full z-4" (click)="closeFilterMenu()"></div>
+
+                <div *ngIf="isFilterMenuOpen" class="absolute top-100 right-0 mt-2 z-5 surface-card shadow-4 border-round-xl p-3" style="width: 300px; min-width: 280px;">
+                    <div class="flex flex-column gap-3">
+                        <div class="flex justify-content-between align-items-center border-bottom-1 surface-border pb-2">
+                            <span class="font-bold text-900">Bộ lọc mở rộng</span>
+                            <i class="pi pi-times cursor-pointer text-500 hover:text-900" (click)="closeFilterMenu()"></i>
+                        </div>
+
+                        <div class="flex flex-wrap gap-2">
+                            <button pButton label="Tháng này" class="p-button-outlined p-button-sm flex-1"
+                                    [class.p-button-success]="selectedRange === 'month'"
+                                    (click)="loadDashboardData('month'); closeFilterMenu()"></button>
+
+                            <button pButton label="Quý này" class="p-button-outlined p-button-sm flex-1"
+                                    [class.p-button-success]="selectedRange === 'quarter'"
+                                    (click)="loadDashboardData('quarter'); closeFilterMenu()"></button>
+                        </div>
+
+                        <button pButton label="Năm nay" class="p-button-outlined p-button-sm w-full"
+                                [class.p-button-success]="selectedRange === 'year'"
+                                (click)="loadDashboardData('year'); closeFilterMenu()"></button>
+
+                        <div class="border-top-1 surface-border pt-3">
+                            <span class="font-bold text-700 block mb-2 text-sm">Tùy chọn ngày</span>
+                            <div class="flex flex-column gap-2">
+                                <div class="field mb-1">
+                                    <label class="block text-xs mb-1 text-500">Từ ngày</label>
+                                    <p-datepicker [(ngModel)]="customFromDate" dateFormat="dd/mm/yy" [showIcon]="true" styleClass="w-full p-inputtext-sm" appendTo="body"></p-datepicker>
+                                </div>
+                                <div class="field mb-2">
+                                    <label class="block text-xs mb-1 text-500">Đến ngày</label>
+                                    <p-datepicker [(ngModel)]="customToDate" dateFormat="dd/mm/yy" [showIcon]="true" styleClass="w-full p-inputtext-sm" appendTo="body"></p-datepicker>
+                                </div>
+                                <button pButton label="Áp dụng" icon="pi pi-check"
+                                        class="w-full p-button-success p-button-sm"
+                                        [disabled]="!customFromDate || !customToDate"
+                                        (click)="applyCustomDate()"></button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                </div>
+        </div>
+    </div>
+
+    <div class="p-2 md:p-4 pt-3">
+        <div class="grid mb-3">
+            <div class="col-6 lg:col-3 p-1 md:p-2">
+                <div class="surface-card shadow-1 p-3 border-round border-left-3 border-green-500 h-full hover-card">
+                    <span class="block text-500 font-medium text-sm mb-2">Sản Lượng</span>
+                    <div class="text-900 font-medium text-xl md:text-3xl">{{ kpiMetrics().uniqueOrders }}</div>
+                    <span class="text-green-500 font-medium text-xs mt-2">Đơn hoàn tất</span>
+                </div>
+            </div>
+            <div class="col-6 lg:col-3 p-1 md:p-2">
+                <div class="surface-card shadow-1 p-3 border-round border-left-3 border-blue-500 h-full hover-card">
+                    <span class="block text-500 font-medium text-sm mb-2">Lượt Xử Lý</span>
+                    <div class="text-900 font-medium text-xl md:text-3xl">{{ kpiMetrics().totalAttempts }}</div>
+                    <span class="text-blue-500 font-medium text-xs mt-2">Ratio: {{ kpiMetrics().efficiencyRatio }}x</span>
+                </div>
+            </div>
+            <div class="col-6 lg:col-3 p-1 md:p-2">
+                <div class="surface-card shadow-1 p-3 border-round border-left-3 border-pink-500 h-full hover-card">
+                    <span class="block text-500 font-medium text-sm mb-2">Tỷ Lệ Lỗi</span>
+                    <div class="text-900 font-medium text-xl md:text-3xl text-pink-500">{{ kpiMetrics().reworkRate }}%</div>
+                    <span class="text-500 text-xs mt-2">Lãng phí</span>
+                </div>
+            </div>
+            <div class="col-6 lg:col-3 p-1 md:p-2">
+                <div class="surface-card shadow-1 p-3 border-round border-left-3 border-orange-500 h-full hover-card">
+                    <span class="block text-500 font-medium text-sm mb-2">Thiếu Video</span>
+                    <div class="text-900 font-medium text-xl md:text-3xl text-orange-500">{{ kpiMetrics().riskCount }}</div>
+                    <span class="text-500 text-xs mt-2">Cần check</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid mb-3">
+            <div class="col-12 lg:col-4 p-1 md:p-2">
+                <div class="surface-card shadow-1 border-round p-3 h-full">
+                    <h5 class="text-base md:text-lg font-bold mt-0 mb-3">Phân Tích Lý Do</h5>
+                    <div class="w-full flex justify-content-center">
+                        <p-chart type="doughnut" [data]="reworkChartData" [options]="chartOptions" height="220px" width="100%"></p-chart>
+                    </div>
+                </div>
+            </div>
+            <div class="col-12 lg:col-8 p-1 md:p-2">
+                <div class="surface-card shadow-1 border-round p-3 h-full">
+                    <h5 class="text-base md:text-lg font-bold mt-0 mb-3">Phân Bổ Thời Gian</h5>
+                    <div class="w-full">
+                        <p-chart type="bar" [data]="durationChartData" [options]="chartOptions" height="220px" width="100%"></p-chart>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="surface-card shadow-1 border-round p-2 md:p-4">
+            <div class="flex flex-wrap align-items-center justify-content-between mb-3 gap-2">
+                 <h5 class="m-0 text-lg font-bold">Nhật Ký Đóng Gói</h5>
+                 <span class="p-input-icon-left w-full md:w-auto">
+                    <i class="pi pi-search"></i>
+                    <input pInputText type="text" (input)="dt.filterGlobal($any($event.target).value, 'contains')" placeholder="Tìm mã, user..." class="p-inputtext-sm w-full md:w-20rem" />
+                </span>
+            </div>
+
+            <p-table #dt [value]="orders()" [paginator]="true" [rows]="10" [loading]="loading()"
+                     [globalFilterFields]="['code', 'user_id', 'note']"
+                     styleClass="p-datatable-sm p-datatable-gridlines"
+                     [rowHover]="true"
+                     [scrollable]="true"
+                     scrollHeight="600px">
+
+                <ng-template pTemplate="header">
+                    <tr>
+                        <th style="min-width: 60px" class="text-center">Avt</th>
+                        <th style="min-width: 150px">Mã Đơn / Thông tin</th>
+                        <th style="min-width: 120px">Trạng thái</th>
+                        <th style="min-width: 150px">Ghi chú</th>
+                        <th style="min-width: 60px" class="text-center">Xem</th>
+                    </tr>
+                </ng-template>
+
+                <ng-template pTemplate="body" let-order>
+                    <tr [ngClass]="{'bg-red-50': order.parent_id || (order.note && order.note.includes('Auto Timeout'))}">
+
+                        <td class="text-center p-1">
+                            <div class="flex justify-content-center">
+                                <p-image [src]="getFullUrl(order.path_avatar)"
+                                         [preview]="true"
+                                         alt="Img"
+                                         width="40" height="40"
+                                         imageClass="border-circle shadow-1"
+                                         [style]="{'width':'40px', 'height':'40px', 'object-fit':'cover', 'display':'block'}">
+                                    <ng-template pTemplate="indicator"><i class="pi pi-search"></i></ng-template>
+                                </p-image>
+                            </div>
+                        </td>
+
+                        <td>
+                            <div class="flex flex-column gap-1">
+                                <span class="font-bold text-primary cursor-pointer hover:underline text-base" (click)="openVideoModal(order)">{{ order.code }}</span>
+                                <div class="text-xs text-500 flex gap-2">
+                                    <span><i class="pi pi-calendar mr-1"></i>{{ order.created_at | date:'dd/MM HH:mm' }}</span>
+                                    <span><i class="pi pi-user mr-1"></i>{{ order.user_id }}</span>
+                                </div>
+                                <div *ngIf="order.parent_id" class="text-xs text-pink-500 font-bold"><i class="pi pi-replay mr-1"></i>Làm lại</div>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="flex flex-column gap-1">
+                                <p-tag [value]="order.status|orderStatus" [severity]="getSeverity(order.status)"></p-tag>
+                                <span [class.text-red-500]="calculateDurationSeconds(order.start_at, order.closed_at) > 180" class="text-xs font-medium"><i class="pi pi-clock mr-1"></i>{{ formatDuration(order.start_at, order.closed_at) }}</span>
+                            </div>
+                        </td>
+                        <td><span *ngIf="order.note" class="text-sm text-700 block white-space-normal" style="max-width: 200px;">{{ order.note }}</span></td>
+                        <td class="text-center">
+                            <button pButton icon="pi pi-eye" class="p-button-rounded p-button-text p-button-secondary" (click)="openVideoModal(order)" [class.text-green-500]="order.path_video" [class.text-red-500]="!order.path_video"></button>
+                        </td>
+                    </tr>
+                </ng-template>
+                <ng-template pTemplate="emptymessage"><tr><td colspan="5" class="text-center p-3">Không có dữ liệu</td></tr></ng-template>
+            </p-table>
+        </div>
+    </div>
+</div>
+
+<p-dialog [(visible)]="showDetailDialog" [modal]="true" [style]="{width: '95vw', maxWidth: '1400px', height: '90vh'}" [maximizable]="true" [dismissableMask]="true" [header]="detailHeader" styleClass="order-detail-dialog">
+    <ng-template pTemplate="content">
+        <app-order-detail *ngIf="showDetailDialog && selectedOrderCode" [inputCode]="selectedOrderCode" [isDialogMode]="true"></app-order-detail>
+    </ng-template>
+</p-dialog>

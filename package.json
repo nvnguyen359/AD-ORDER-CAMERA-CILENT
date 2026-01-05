@@ -35,6 +35,8 @@
     "@primeuix/themes": "^2.0.2",
     "@zxing/browser": "^0.1.5",
     "@zxing/ngx-scanner": "^21.0.0",
+    "angularx-qrcode": "^21.0.4",
+    "chart.js": "^4.5.1",
     "date-fns": "^4.1.0",
     "express": "^5.2.1",
     "file-saver": "^2.0.5",

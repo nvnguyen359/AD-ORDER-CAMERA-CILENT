@@ -1,0 +1,96 @@
+:host {
+  display: block;
+  width: 100%;
+}
+
+/* Line nối dọc */
+.timeline-line {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 2.2rem;
+  width: 2px;
+  background-color: #e5e7eb;
+  z-index: 0;
+}
+
+.timeline-item:last-child .flex-grow-1 {
+  border-bottom: none !important;
+}
+
+.w-fit {
+  width: fit-content;
+}
+
+/* Responsive Text */
+@media (max-width: 400px) {
+  .text-lg {
+    font-size: 1rem !important;
+  }
+}
+
+/* --- Custom Play Button --- */
+.btn-play-gradient {
+  /* Kích thước vừa vặn hơn (40px) */
+  width: 2.5rem;
+  height: 2.5rem;
+margin-right: 6px;
+  /* Màu Gradient: Từ vàng sáng sang cam đậm -> Nhìn nổi khối 3D */
+  background: linear-gradient(135deg, #fbbf24 0%, #d97706 100%);
+  border: none;
+  color: white;
+
+  /* Hiệu ứng mượt mà */
+  transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+
+  /* Căn chỉnh icon bên trong */
+  ::ng-deep .p-button-icon {
+    font-size: 1rem;
+    /* Mẹo: Icon Play tam giác thường lệch trái về thị giác, đẩy nhẹ sang phải 2px cho cân */
+    margin-left: 2px;
+  }
+
+  &:hover {
+    /* Phóng to nhẹ và đổi shadow sang màu cam */
+    transform: scale(1.1);
+    box-shadow: 0 4px 15px rgba(217, 119, 6, 0.4) !important;
+    background: linear-gradient(135deg, #fcd34d 0%, #b45309 100%);
+  }
+
+  &:active {
+    /* Hiệu ứng nhấn xuống */
+    transform: scale(0.95);
+    box-shadow: 0 2px 5px rgba(217, 119, 6, 0.4) !important;
+  }
+}
+/* --- Mini Play Button (Cho timeline item) --- */
+.btn-play-mini {
+    /* Kích thước nhỏ gọn (32px) */
+    width: 2rem;
+    height: 2rem;
+
+    /* Giữ nguyên màu Gradient cam vàng sang trọng */
+    background: linear-gradient(135deg, #fbbf24 0%, #d97706 100%);
+    border: none;
+    color: white;
+
+    /* Hiệu ứng mượt */
+    transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+
+    /* Chỉnh icon play nhỏ lại cho vừa nút */
+    ::ng-deep .p-button-icon {
+        font-size: 0.75rem; /* Icon nhỏ (~12px) */
+        margin-left: 2px;   /* Căn giữa thị giác */
+    }
+
+    /* Hover: Nổi lên nhẹ */
+    &:hover {
+        transform: translateY(-2px); /* Bay lên nhẹ thay vì phóng to */
+        box-shadow: 0 4px 8px rgba(217, 119, 6, 0.3) !important;
+        background: linear-gradient(135deg, #fcd34d 0%, #b45309 100%);
+    }
+
+    &:active {
+        transform: scale(0.95);
+    }
+}

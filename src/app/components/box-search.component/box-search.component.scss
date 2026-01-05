@@ -1,0 +1,66 @@
+:host {
+  display: block;
+  width: 100%;
+  max-width: 500px; /* Giới hạn độ rộng trên Header */
+}
+
+/* Container chính hình viên thuốc */
+.search-group {
+  background-color: #f1f5f9; /* Nền xám nhẹ */
+  border-radius: 999px;      /* Bo tròn 2 đầu */
+  border: 1px solid transparent;
+  transition: all 0.2s ease;
+  padding: 2px;
+  align-items: center;
+
+  /* Hiệu ứng khi focus */
+  &:focus-within {
+    background-color: #ffffff;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+  }
+}
+
+/* Style cho chữ được highlight */
+.highlight-match {
+  color: var(--primary-color);
+  font-weight: 800;
+  background-color: rgba(59, 130, 246, 0.1);
+  padding: 0 2px;
+  border-radius: 2px;
+}
+
+/* Override PrimeNG Styles */
+:host ::ng-deep {
+  .p-autocomplete-input {
+    background: transparent !important;
+    box-shadow: none !important;
+    border: none !important;
+    padding-left: 0 !important;
+
+    &:focus {
+      outline: none;
+    }
+  }
+
+  /* Custom Panel đổ xuống */
+  .box-search-panel {
+    border-radius: 12px !important;
+    margin-top: 8px !important;
+    box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.15) !important;
+    border: 1px solid #e2e8f0 !important;
+
+    .p-autocomplete-items {
+      padding: 6px !important;
+    }
+
+    .p-autocomplete-item {
+      border-radius: 8px !important;
+      margin-bottom: 2px !important;
+
+      &.p-focus {
+        background-color: #eff6ff !important;
+      }
+    }
+  }
+}

@@ -6,7 +6,7 @@ import { Order, OrderResponse } from '../models/order.model';
 import { environment } from '../../environments/environment';
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class OrderService extends BaseService<Order> {
   protected override endpoint = 'orders';
@@ -15,6 +15,10 @@ export class OrderService extends BaseService<Order> {
     super();
   }
 
+  /**
+   * Lấy danh sách đơn hàng có xử lý bộ lọc, phân trang, sắp xếp
+   * @param params Params từ component (PrimeNG Table LazyLoadEvent)
+   */
   getOrders(params: any): Observable<OrderResponse> {
     // 1. Clone params để xử lý, tránh ảnh hưởng object gốc bên component
     const queryParams: any = { ...params };
@@ -26,18 +30,16 @@ export class OrderService extends BaseService<Order> {
     if (queryParams.startDate) {
       queryParams.start_date = this.formatDateForBackend(queryParams.startDate, false);
       delete queryParams.startDate;
-    }
-    else if (queryParams.start_date && queryParams.start_date instanceof Date) {
-        queryParams.start_date = this.formatDateForBackend(queryParams.start_date, false);
+    } else if (queryParams.start_date && queryParams.start_date instanceof Date) {
+      queryParams.start_date = this.formatDateForBackend(queryParams.start_date, false);
     }
 
     // 2. Xử lý End Date (Ép về 23:59:59)
     if (queryParams.endDate) {
       queryParams.end_date = this.formatDateForBackend(queryParams.endDate, true);
       delete queryParams.endDate;
-    }
-    else if (queryParams.end_date && queryParams.end_date instanceof Date) {
-        queryParams.end_date = this.formatDateForBackend(queryParams.end_date, true);
+    } else if (queryParams.end_date && queryParams.end_date instanceof Date) {
+      queryParams.end_date = this.formatDateForBackend(queryParams.end_date, true);
     }
 
     // --- B. XỬ LÝ PHÂN TRANG & SORT ---
@@ -46,7 +48,7 @@ export class OrderService extends BaseService<Order> {
     const pageSize = queryParams.rows || queryParams.pageSize || 10;
     queryParams.page_size = pageSize;
 
-    // Map 'first' -> 'page'
+    // Map 'first' -> 'page' (Backend thường bắt đầu từ 0)
     if (queryParams.first !== undefined) {
       queryParams.page = Math.floor(queryParams.first / pageSize);
     }
@@ -61,24 +63,29 @@ export class OrderService extends BaseService<Order> {
       queryParams.sort_dir = queryParams.sortOrder === 1 ? 'asc' : 'desc';
     }
 
-    // [BỔ SUNG] Mặc định sắp xếp giảm dần theo ngày nếu UI không gửi sort lên
+    // [BỔ SUNG] Mặc định sắp xếp giảm dần theo ngày tạo nếu UI không gửi sort lên
     if (!queryParams.sort_by) {
-        // Thay 'created_at' bằng tên cột ngày trong DB của bạn (vd: order_date, created_date...)
-        queryParams.sort_by = 'created_at';
-        queryParams.sort_dir = 'desc';
+      queryParams.sort_by = 'created_at';
+      queryParams.sort_dir = 'desc';
     }
 
-    // --- C. CLEANUP (XÓA DỮ LIỆU RÁC) ---
+    // --- C. CLEANUP (XÓA DỮ LIỆU RÁC CỦA PRIMENG) ---
     const keysToRemove = [
-        'rows', 'pageSize', 'first', 'sortField', 'sortOrder',
-        'filters', 'globalFilter', 'multiSortMeta',
-        'forceUpdate'
+      'rows',
+      'pageSize',
+      'first',
+      'sortField',
+      'sortOrder',
+      'filters',
+      'globalFilter',
+      'multiSortMeta',
+      'forceUpdate',
     ];
 
-    keysToRemove.forEach(key => delete queryParams[key]);
+    keysToRemove.forEach((key) => delete queryParams[key]);
 
     // Xóa các giá trị null/undefined/rỗng
-    Object.keys(queryParams).forEach(key => {
+    Object.keys(queryParams).forEach((key) => {
       if (queryParams[key] === null || queryParams[key] === undefined || queryParams[key] === '') {
         delete queryParams[key];
       }
@@ -102,7 +109,7 @@ export class OrderService extends BaseService<Order> {
 
     // Nếu là End Date, ép thời gian về cuối ngày
     if (isEndOfDay) {
-        d.setHours(23, 59, 59, 999);
+      d.setHours(23, 59, 59, 999);
     }
 
     const year = d.getFullYear();
@@ -115,10 +122,21 @@ export class OrderService extends BaseService<Order> {
     return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
   }
 
-  deleteOrder(id: number): Observable<any> { return this.delete(id); }
+  // Xóa 1 đơn hàng
+  deleteOrder(id: number): Observable<any> {
+    return this.delete(id);
+  }
 
+  // Xóa tất cả đơn hàng
   deleteAllOrders(): Observable<any> {
-    const http = inject(HttpClient);
-    return http.delete(`${environment.apiUrl}/orders/delete-all`);
+    // Gọi API: DELETE /api/v1/orders
+    // Lưu ý: Backend router đang định nghĩa @router.delete("") tại prefix /orders
+    return this.http.delete(this.apiUrl);
+  }
+
+  // Lấy danh sách gia đình đơn hàng (Cha - Con - Chính nó)
+  getOrderFamily(code: string): Observable<any> {
+    // Gọi API: GET /api/v1/orders/family?code=...
+    return this.http.get<any>(`${this.apiUrl}/family`, { params: { code } });
   }
 }

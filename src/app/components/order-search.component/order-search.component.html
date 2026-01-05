@@ -1,12 +1,12 @@
-<p-toolbar class=" border-none shadow-1  surface-card border-round">
-  <div class="p-toolbar-group-start flex flex-column w-full gap-3">
+<p-toolbar class="border-none shadow-1 surface-card border-round p-3">
+  <div class="p-toolbar-group-start flex flex-wrap align-items-center w-full gap-3">
 
-    <div class="w-full flex align-items-center gap-2">
-      <p-inputGroup class="flex-1">
-        <p-inputGroupAddon>
-          <i class="pi pi-search"></i>
-        </p-inputGroupAddon>
-         <p-autoComplete
+    <div class="flex-1 min-w-0" style="min-width: 280px;">
+      <div class="search-group">
+
+        <i class="pi pi-search text-500 ml-2"></i>
+
+        <p-autoComplete
           [(ngModel)]="selectedCode"
           [suggestions]="suggestions()"
           (completeMethod)="searchOrders($event)"
@@ -14,75 +14,75 @@
           field="code"
           dataKey="code"
           placeholder="Nhập mã đơn, SĐT..."
-          [delay]="600"
-          
+          [delay]="400"
           [showClear]="false"
-          styleClass="w-full"
-          inputStyleClass="w-full">
+          styleClass="w-full border-none"
+          inputStyleClass="w-full border-none shadow-none text-base bg-transparent p-2">
 
           <ng-template let-order pTemplate="item">
-            <div class="flex align-items-center gap-2">
-
-              <div class="relative w-2rem h-2rem border-circle overflow-hidden flex align-items-center justify-content-center bg-gray-100 border-1 border-300">
+            <div class="flex align-items-center gap-3 p-1">
+              <div class="w-2rem h-2rem border-circle overflow-hidden flex align-items-center justify-content-center bg-gray-100 border-1 border-300 flex-shrink-0">
                 @if (order.path_avatar) {
                   <img [src]="getFullUrl(order.path_avatar)" class="w-full h-full object-cover" alt="avatar"/>
                 } @else {
                   <i class="pi pi-box text-500"></i>
                 }
               </div>
-
-              <div class="flex flex-column">
-                <span class="font-light text-900"
-                      [innerHTML]="highlightText(order.code)">
-                </span>
-
+              <div class="flex flex-column gap-1 overflow-hidden">
+                <span class="font-bold text-900 line-height-1" [innerHTML]="highlightText(order.code)"></span>
                 @if (order.packer_name) {
-                  <span class="text-xs font-light text-500"
-                        [innerHTML]="highlightText(order.packer_name)">
-                  </span>
+                  <span class="text-xs text-500" [innerHTML]="highlightText(order.packer_name)"></span>
                 }
               </div>
             </div>
           </ng-template>
 
           <ng-template pTemplate="empty">
-            <div class="p-2 text-center text-500 text-sm font-light">Không tìm thấy đơn hàng</div>
+            <div class="p-3 text-center text-500 text-sm">Không tìm thấy kết quả</div>
           </ng-template>
         </p-autoComplete>
 
-        @if (selectedCode) {
+        @if (selectedCode || searchKeyword()) {
           <button pButton type="button"
                   icon="pi pi-times"
-                  class="p-button-secondary"
+                  class="p-button-rounded p-button-text p-button-secondary p-button-sm w-2rem h-2rem mx-1"
                   (click)="onClearSearch()"
                   pTooltip="Xóa tìm kiếm"
                   tooltipPosition="bottom">
           </button>
         }
-        <button pButton icon="pi pi-qrcode"
-                (click)="openQrScanner.emit()"
-                pTooltip="Quét mã"
-                tooltipPosition="bottom"
-                class="p-button-outlined p-button-secondary">
-        </button>
-      </p-inputGroup>
 
-      <button pButton icon="pi pi-filter"
-              class="p-button-text sm:hidden"
-              (click)="mobileMenu.toggle($event)"></button>
+        <button pButton type="button"
+                icon="pi pi-qrcode"
+                class="p-button-rounded p-button-text p-button-primary w-2rem h-2rem mr-1"
+                (click)="openQrScanner.emit()"
+                pTooltip="Quét mã QR"
+                tooltipPosition="bottom">
+        </button>
+
+      </div>
     </div>
 
-    <div class="hidden sm:flex align-items-center gap-2 flex-wrap">
-      <span class="text-500 mr-2 text-sm"><i class="pi pi-filter mr-1"></i>Thời gian:</span>
+    <button pButton icon="pi pi-filter"
+            class="p-button-text sm:hidden ml-auto"
+            (click)="mobileMenu.toggle($event)">
+    </button>
 
-      @for (p of presets; track p.value) {
-        <p-chip [label]="p.label"
-                [styleClass]="activePreset() === p.value ? 'bg-primary text-white cursor-pointer text-sm' : 'cursor-pointer hover:surface-200 transition-colors text-sm'"
-                (click)="selectPreset(p.value)">
-        </p-chip>
-      }
+    @if (isShowFilter()) {
+    <div class="hidden sm:flex align-items-center gap-2 flex-wrap flex-shrink-0" *ngIf="isShowFilter">
 
-      <span class="mx-2 text-300">|</span>
+      <span class="text-500 text-sm font-medium"><i class="pi pi-filter mr-1"></i>Thời gian:</span>
+
+      <div class="flex gap-1">
+        @for (p of presets; track p.value) {
+          <p-chip [label]="p.label"
+                  [styleClass]="activePreset() === p.value ? 'bg-primary text-white cursor-pointer text-sm font-medium px-3 py-1' : 'surface-100 text-600 cursor-pointer hover:surface-200 transition-colors text-sm px-3 py-1'"
+                  (click)="selectPreset(p.value)">
+          </p-chip>
+        }
+      </div>
+
+      <span class="mx-1 text-300">|</span>
 
       <p-datepicker
         [(ngModel)]="rangeDates"
@@ -91,15 +91,18 @@
         placeholder="Tùy chọn ngày..."
         [showIcon]="true"
         (onSelect)="onCustomDateSelect()"
-        inputStyleClass="text-sm"
-        [style]="{'width':'240px'}">
+        inputStyleClass="text-sm border-round-2xl cursor-pointer"
+        [style]="{'width':'240px'}"
+        styleClass="p-inputtext-sm">
       </p-datepicker>
     </div>
+    }
 
   </div>
 </p-toolbar>
 
 <p-menu #mobileMenu [model]="menuItems()" [popup]="true"></p-menu>
+
 <app-qr-scan-dialog
     [(visible)]="showQrDialog"
     (scanSuccess)="onQrScanSuccess($event)">

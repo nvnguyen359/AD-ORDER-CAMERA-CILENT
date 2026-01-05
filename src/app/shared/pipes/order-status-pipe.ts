@@ -9,7 +9,7 @@ export class OrderStatusPipe implements PipeTransform {
  // Map dữ liệu trạng thái
   private statusMap: { [key: string]: string } = {
     'packing': 'Đang đóng gói',
-    'packed': 'Đã đóng gói',
+    'packed': 'Đóng gói xong',
     'shipping': 'Đang vận chuyển',
     'closed': 'Hoàn thành',
     'cancelled': 'Đã hủy',

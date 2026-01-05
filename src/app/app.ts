@@ -1,20 +1,18 @@
 import { CommonModule } from '@angular/common';
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, signal, ViewChild } from '@angular/core';
 import { Router, RouterOutlet, RouterModule } from '@angular/router';
 import { AvatarModule } from 'primeng/avatar';
 import { BadgeModule } from 'primeng/badge';
 import { ButtonModule } from 'primeng/button';
 import { DrawerModule } from 'primeng/drawer';
 import { InputTextModule } from 'primeng/inputtext';
-import { ProgressSpinnerModule } from 'primeng/progressspinner';
-import { BlockUIModule } from 'primeng/blockui';
 import { ToastModule } from 'primeng/toast';
-import { MessageService } from 'primeng/api'; // Chỉ import Type, không provide ở đây
+import { MessageService } from 'primeng/api';
 
 import { menuItems } from './Menu';
-import { LoadingService } from './core/services/loading.service';
 import { AuthService } from './core/services/auth.service';
-import { OrderSearchComponent } from './components/order-search.component/order-search.component';
+import { BoxSearchComponent } from './components/box-search.component/box-search.component';
+import { OrderService } from './core/services/order.service';
 
 @Component({
   selector: 'app-root',
@@ -28,32 +26,53 @@ import { OrderSearchComponent } from './components/order-search.component/order-
     InputTextModule,
     DrawerModule,
     ButtonModule,
-    ProgressSpinnerModule,
-    BlockUIModule,
-    ToastModule
+    ToastModule,
+    BoxSearchComponent,
   ],
   templateUrl: './app.html',
   styleUrls: ['./app.scss'],
 })
 export class App {
-  protected readonly title = signal('AD-ORDER-CAMERA-CILENT');
+  protected readonly title = signal('AD-ORDER-CAMERA-CLIENT');
   visible = false;
-  menuItems!: any[];
-  protected loadingService = inject(LoadingService);
+  menuItems = menuItems;
+  isShowFilter: boolean = false;
 
-  // AuthService và Router check
+  @ViewChild(BoxSearchComponent) boxSearch!: BoxSearchComponent;
+
   constructor(
-    private router: Router,
+    public router: Router,
     private authService: AuthService,
-    private messageService: MessageService // Nó sẽ tự lấy từ Root (AppConfig)
+    private messageService: MessageService,
+    private orderService: OrderService
   ) {
-    // Logic check auth nên để trong Guard (CanActivate) sẽ tốt hơn constructor
-    if(!authService.isAuthenticated()){
-       router.navigate(['/login'])
+    if (!this.authService.checkTokenIsValid()) {
+      // Logic redirect...
     }
   }
 
-  ngOnInit() {
-    this.menuItems = menuItems;
+  ngOnInit() {}
+
+  handleMenuClick(event: Event, item: any) {
+    this.visible = false; // Đóng menu
+
+    // [SỬA LỖI QUAN TRỌNG] Dùng includes() thay vì === vì icon của bạn là 'pi pi-qrcode btn-ac'
+    if (item.icon && item.icon.includes('pi-qrcode')) {
+
+      console.log('Detected QR Click!'); // Log để kiểm tra
+      event.preventDefault();
+      event.stopPropagation();
+
+      if (this.boxSearch) {
+        this.boxSearch.showQrDialog = true;
+      } else {
+        console.error('Không tìm thấy BoxSearchComponent!');
+        this.messageService.add({
+            severity: 'error',
+            summary: 'Lỗi',
+            detail: 'Không mở được Camera. Vui lòng tải lại.'
+        });
+      }
+    }
   }
 }

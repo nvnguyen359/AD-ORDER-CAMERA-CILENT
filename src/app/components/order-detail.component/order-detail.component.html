@@ -1,0 +1,210 @@
+<div class="detail-wrapper flex flex-column h-full overflow-hidden bg-white">
+
+  @if (!isDialogMode) {
+    <div class="flex-none flex align-items-center gap-3 p-3 border-bottom-1 surface-border">
+      <p-button icon="pi pi-arrow-left" [rounded]="true" [text]="true" (click)="goBack()"></p-button>
+      <div>
+         <h2 class="m-0 font-bold text-lg">Chi tiết đơn hàng</h2>
+         <span class="text-500 text-sm">Mã: <strong class="text-primary">{{ selectedOrder()?.code }}</strong></span>
+      </div>
+    </div>
+  }
+
+  @if (loading()) {
+    <div class="flex-grow-1 p-3 flex flex-column gap-3">
+        <p-skeleton height="300px" styleClass="w-full border-round"></p-skeleton>
+        <p-skeleton height="100px" styleClass="w-full border-round"></p-skeleton>
+    </div>
+  } @else {
+
+    <div class="flex-grow-1 flex flex-column lg:flex-row min-h-0">
+
+      <div class="flex-grow-1 lg:w-9 flex flex-column bg-black-alpha-90 relative overflow-hidden">
+
+        <div class="video-area flex-grow-1 flex align-items-center justify-content-center relative">
+          @if (selectedOrder()?.path_video) {
+            <video
+                #videoPlayer
+                [src]="getFullUrl(selectedOrder().path_video)"
+                (play)="onVideoPlay()"
+                (pause)="onVideoPause()"
+                (ended)="onVideoEnded()"
+                controls
+                autoplay
+                class="w-full h-full"
+                style="max-height: 100%; object-fit: contain;">
+            </video>
+          } @else {
+             <div class="text-white-alpha-60 flex flex-column align-items-center">
+                <i class="pi pi-video-slash text-5xl mb-2"></i>
+                <span>Không có video</span>
+             </div>
+          }
+        </div>
+
+        <div class="info-bar flex-none p-3 surface-0 border-top-1 surface-border flex justify-content-between align-items-center">
+            <div class="flex align-items-center gap-3">
+                <p-avatar [image]="getFullUrl(selectedOrder()?.path_avatar)" shape="circle" size="large" styleClass="border-1 surface-border"></p-avatar>
+                <div>
+                    <div class="font-bold text-900 line-height-2">NV: {{ selectedOrder()?.packer_name || '#' + selectedOrder()?.user_id }}</div>
+                    <div class="text-sm text-500">{{ selectedOrder()?.closed_at | date:'HH:mm dd/MM/yyyy' }}</div>
+                </div>
+            </div>
+
+            <div class="flex flex-column align-items-end gap-1">
+                <div class="flex align-items-center gap-2">
+                     <button pButton icon="pi pi-download"
+                             class="p-button-rounded p-button-text p-button-secondary w-2rem h-2rem"
+                             pTooltip="Tải video này" tooltipPosition="left"
+                             (click)="downloadVideo(selectedOrder(), $event)">
+                     </button>
+
+                     <p-tag [value]="selectedOrder()?.status | orderStatus" [severity]="getSeverity(selectedOrder()?.status)"></p-tag>
+                </div>
+                <div class="text-xs text-500">Cam: {{ selectedOrder()?.camera_id }}</div>
+            </div>
+        </div>
+
+        @if (orderList().length > 0) {
+            <div class="timeline-container w-full px-3 pt-4 pb-3 surface-50 border-top-1 surface-border overflow-x-auto custom-scrollbar">
+
+                <div class="flex align-items-center gap-2" style="min-width: max-content;">
+
+                    <span class="text-xs font-bold text-500 uppercase mr-2 flex-shrink-0">Quy trình:</span>
+
+                    @for (item of orderList().slice().reverse(); track item.id; let isLast = $last) {
+                        <div
+                            class="timeline-node relative flex align-items-center gap-2 p-2 border-round-xl cursor-pointer transition-all transition-duration-200 border-1"
+                            [ngClass]="{
+                                'bg-white shadow-2 border-primary': selectedOrder()?.id === item.id,
+                                'surface-0 border-transparent text-500 hover:surface-200': selectedOrder()?.id !== item.id,
+                                'opacity-70': selectedOrder()?.id !== item.id && !item.parent_id
+                            }"
+                            (click)="handleItemClick(item)">
+
+                            <div class="w-2rem h-2rem border-circle flex align-items-center justify-content-center flex-shrink-0"
+                                 [ngClass]="item.parent_id ? 'bg-orange-100 text-orange-600' : 'bg-blue-50 text-blue-600'">
+                                <i class="pi text-sm" [ngClass]="item.parent_id ? 'pi-replay' : 'pi-box'"></i>
+                            </div>
+
+                            <div class="flex flex-column justify-content-center">
+                                <span class="text-xs font-bold white-space-nowrap"
+                                      [class.text-900]="selectedOrder()?.id === item.id">
+                                    {{ item.code }}
+                                </span>
+
+                                <div class="flex align-items-center gap-1 white-space-nowrap">
+                                    <span class="text-[10px] font-medium"
+                                          [ngClass]="item.parent_id ? 'text-orange-600' : 'text-blue-600'">
+                                        {{ item.parent_id ? 'Hoàn/Đóng lại' : 'Đơn gốc' }}
+                                    </span>
+                                    <span class="text-[10px] text-400">• {{ item.created_at | date:'HH:mm' }}</span>
+                                </div>
+                            </div>
+
+                            @if (selectedOrder()?.id === item.id) {
+                                <div class="active-indicator"></div>
+                            }
+                        </div>
+
+                        @if (!isLast) {
+                            <div class="flex align-items-center justify-content-center px-1">
+                                <i class="pi pi-arrow-right text-300 text-xs"></i>
+                            </div>
+                        }
+                    }
+                </div>
+            </div>
+        }
+      </div>
+
+      <div class="flex-none h-20rem lg:h-auto lg:w-3 surface-50 border-left-1 surface-border flex flex-column">
+
+        <div class="p-3 font-bold text-700 border-bottom-1 surface-border flex justify-content-between align-items-center">
+            <div class="flex align-items-center gap-2">
+                <span>Lịch sử ({{ orderList().length }})</span>
+                <i class="pi pi-download text-primary cursor-pointer hover:text-primary-700 transition-colors"
+                   pTooltip="Tải tất cả video"
+                   (click)="downloadAllVideos()"></i>
+            </div>
+            <span class="text-sm font-normal text-primary">{{ durationString() }}</span>
+        </div>
+
+        <div class="flex-grow-1 overflow-y-auto custom-scrollbar">
+            <div class="flex flex-column p-2 gap-2 list-xxx">
+                @for (item of orderList(); track item.id) {
+                    <div
+                       class="p-2 border-round border-1 transition-colors transition-duration-150 flex flex-column gap-2 cursor-pointer group "
+                       [class.bg-blue-50]="selectedOrder()?.id === item.id"
+                       [class.border-blue-500]="selectedOrder()?.id === item.id"
+                       [class.surface-card]="selectedOrder()?.id !== item.id"
+                       [class.border-transparent]="selectedOrder()?.id !== item.id"
+                       [class.shadow-1]="selectedOrder()?.id !== item.id"
+                       (click)="handleItemClick(item)">
+
+                       <div class="flex gap-3 align-items-start list-item">
+
+                           <div class="relative w-4rem h-3rem border-round overflow-hidden flex-shrink-0 flex align-items-center justify-content-center bg-cover bg-center shadow-1 mt-1"
+                                [style.background-image]="'url(' + getFullUrl(item.path_avatar) + ')'">
+
+                                <div class="absolute top-0 left-0 w-full h-full bg-black-alpha-40"></div>
+                                <i class="pi text-white text-xl relative z-1 transition-all"
+                                   [class.pi-pause]="selectedOrder()?.id === item.id && isPlaying()"
+                                   [class.pi-play]="selectedOrder()?.id !== item.id || !isPlaying()"
+                                   [class.text-2xl]="selectedOrder()?.id === item.id">
+                                </i>
+                           </div>
+
+                           <div class="flex flex-column flex-grow-1 min-w-0">
+
+                               <div class="flex justify-content-between align-items-start mb-1">
+                                   <div class="flex flex-column">
+                                       <span class="font-bold text-sm text-900" [class.text-primary]="selectedOrder()?.id === item.id">
+                                           {{ item.code }}
+                                       </span>
+                                       @if (item.parent_id) {
+                                          <span class="text-xs text-orange-500 font-medium">
+                                            <i class="pi pi-replay text-[10px]"></i> Đóng lại
+                                          </span>
+                                       }
+                                   </div>
+
+                                   <div class="flex align-items-center gap-1 px-2 py-1 border-round border-1"
+                                        [ngClass]="{
+                                            'bg-green-50 border-green-200 text-green-600': item.status === 'packed',
+                                            'bg-red-50 border-red-200 text-red-600': item.status === 'cancelled',
+                                            'bg-blue-50 border-blue-200 text-blue-600': item.status === 'processing'
+                                        }">
+                                       <i [class]="getStatusIcon(item.status)" class="text-xs"></i>
+                                       <span class="text-xs font-bold uppercase">{{ item.status }}</span>
+                                   </div>
+                               </div>
+
+                               <div class="text-xs text-500 flex justify-content-between align-items-center mt-1 flex">
+                                   <span><i class="pi pi-clock mr-1"></i>{{ item.created_at | date:'HH:mm dd/MM' }}</span>
+                                   <span>#{{ item.id }}</span>
+                               </div>
+                           </div>
+                       </div>
+
+                       @if (item.note) {
+                           <div class="w-full flex align-items-center gap-2 text-xs text-700 p-2 flex" style="padding: 0!important;">
+                               <i class="pi pi-info-circle text-orange-400 mt-1 flex-shrink-0"></i>
+                               <span class="line-height-2" style="word-break: break-word;">{{ item.note }}</span>
+                           </div>
+                       }
+
+                       @if (selectedOrder()?.id === item.id && isPlaying()) {
+                           <div class="playing-bars flex gap-1 align-items-end h-4px w-full justify-content-center mt-1">
+                               <div class="bar"></div><div class="bar"></div><div class="bar"></div>
+                           </div>
+                       }
+                    </div>
+                }
+            </div>
+        </div>
+      </div>
+
+    </div>
+  }
+</div>

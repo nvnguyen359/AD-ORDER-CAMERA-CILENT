@@ -1,0 +1,51 @@
+<div class="p-3 bg-gray-50 min-h-full">
+  <div class="flex justify-content-between align-items-center mb-4">
+    <h1 class="text-2xl font-bold m-0"><i class="pi pi-video text-primary mr-2"></i>Quản Lý Camera</h1>
+    <button pButton icon="pi pi-refresh" (click)="loadCameras()" class="p-button-text"></button>
+  </div>
+
+  <div class="grid">
+    @for (cam of cameras(); track cam.id) {
+      <div class="col-12 md:col-6 xl:col-4 p-2">
+        <div class="surface-card border-round-xl shadow-1 h-full flex flex-column border-left-3"
+             [class.border-green-500]="cam.is_connected" [class.border-red-500]="!cam.is_connected">
+
+          <div class="p-3 flex justify-content-between align-items-start">
+            <div class="flex flex-column gap-1 overflow-hidden">
+              <span class="text-xl font-bold text-900 white-space-nowrap text-overflow-ellipsis">{{ cam.display_name || cam.name }}</span>
+              <span class="text-xs text-500">ID: {{ cam.unique_id }}</span>
+            </div>
+            <i class="pi" [ngClass]="cam.is_connected ? 'pi-wifi text-green-500' : 'pi-stop-circle text-red-500'" style="font-size: 1.5rem"></i>
+          </div>
+
+          <div class="px-3 pb-3 flex align-items-center gap-3">
+            <p-tag [severity]="getSeverity(cam.is_connected)" [value]="cam.is_connected ? 'Online' : 'Offline'"></p-tag>
+            <p-tag severity="info" [value]="cam.recording_state"></p-tag>
+          </div>
+
+          <div class="p-2 surface-50 border-top-1 flex justify-content-between" *ngIf="authService.isAdmin">
+            <button pButton icon="pi pi-pencil" label="Đổi tên" class="p-button-text p-button-sm p-button-secondary" (click)="openEditDialog(cam, $event)"></button>
+            <button pButton [icon]="cam.is_connected ? 'pi pi-power-off' : 'pi pi-wifi'"
+                    [label]="cam.is_connected ? 'Ngắt' : 'Kết nối'"
+                    [class.p-button-danger]="cam.is_connected" [class.p-button-success]="!cam.is_connected"
+                    class="p-button-text p-button-sm font-bold" (click)="toggleConnection(cam, $event)"></button>
+          </div>
+        </div>
+      </div>
+    }
+  </div>
+</div>
+
+<p-dialog header="Đổi tên Camera" [(visible)]="showEditDialog" [modal]="true" [style]="{width: '350px'}">
+  <div class="flex flex-column gap-2 py-2">
+    <label class="font-bold">Tên hiển thị mới</label>
+    <input pInputText [(ngModel)]="newDisplayName" class="w-full" autofocus />
+  </div>
+  <ng-template pTemplate="footer">
+    <button pButton label="Hủy" class="p-button-text" (click)="showEditDialog = false"></button>
+    <button pButton label="Lưu" [loading]="isSaving" (click)="saveCameraName()"></button>
+  </ng-template>
+</p-dialog>
+
+<p-confirmDialog></p-confirmDialog>
+<p-toast position="top-center"></p-toast>

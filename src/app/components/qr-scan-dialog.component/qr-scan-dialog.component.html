@@ -9,56 +9,78 @@
   (onHide)="onHideDialog()"
   [style]="{ width: '90vw', maxWidth: '450px' }">
 
-  <div class="scanner-container relative overflow-hidden bg-black border-round-md">
+  <div class="scanner-container relative overflow-hidden bg-black border-round-top-md">
 
-    @if (permissionState() === false) {
+    @if (!isSecureContext) {
+        <div class="absolute top-0 left-0 w-full h-full flex flex-column align-items-center justify-content-center bg-black-alpha-90 z-5 text-white p-4 text-center">
+            <i class="pi pi-lock-open text-4xl mb-3 text-orange-500"></i>
+            <span class="font-bold text-lg text-orange-500">Kết nối không bảo mật!</span>
+            <p class="text-sm mt-2 text-300">
+                Camera chỉ hoạt động trên <b>https://</b> hoặc <b>localhost</b>.<br>
+                Vui lòng kiểm tra lại đường dẫn.
+            </p>
+        </div>
+    }
+
+    @if (permissionState() === false || (permissionState() === true && !hasDevices())) {
       <div class="flex flex-column align-items-center justify-content-center h-full text-white p-4 text-center">
-        <i class="pi pi-ban text-4xl mb-3 text-red-500"></i>
-        <span class="font-bold text-lg text-red-500">Không thể truy cập Camera!</span>
+        <i class="pi pi-camera text-4xl mb-3 text-red-500"></i>
+        <span class="font-bold text-lg text-red-500">Không tìm thấy Camera</span>
         <p class="text-sm mt-2 text-300">
-          Vui lòng kiểm tra: <br>
-          1. Bạn đã cấp quyền Camera cho trình duyệt chưa?<br>
-          2. Có ứng dụng/tab khác đang dùng Camera không?
+          1. Đảm bảo bạn đã chọn "Cho phép" (Allow) camera.<br>
+          2. Kiểm tra dây cáp hoặc driver camera.<br>
+          3. Thử mở bằng trình duyệt khác.
         </p>
-        <p-button label="Thử lại" (click)="retryScan()" styleClass="mt-3 p-button-sm p-button-outlined text-white"></p-button>
+        <p-button label="Thử lại (Xin quyền)" (click)="retryScan()" styleClass="mt-3 p-button-sm p-button-outlined text-white"></p-button>
       </div>
     }
 
-    @if (visible() && permissionState() !== false) {
-      <zxing-scanner
+    @if (permissionState() === null && isSecureContext) {
+         <div class="absolute top-0 left-0 w-full h-full flex align-items-center justify-content-center bg-black-alpha-50 z-1">
+            <i class="pi pi-spin pi-spinner text-white text-4xl"></i>
+            <span class="text-white ml-2">Đang khởi động...</span>
+         </div>
+    }
+
+    <zxing-scanner
         #scanner
-        [enable]="true"
+        [enable]="visible()"
+        [tryHarder]="true"
         [formats]="allowedFormats"
         [(device)]="currentDevice"
         (camerasFound)="onCamerasFound($event)"
         (permissionResponse)="onPermissionResponse($event)"
         (scanSuccess)="onScanSuccess($event)"
-        (scanError)="onScanError($event)"
         cssClass="w-full h-full object-cover">
-      </zxing-scanner>
-    }
+    </zxing-scanner>
 
     @if (hasDevices() && permissionState() === true) {
       <div class="scan-overlay absolute top-0 left-0 w-full h-full pointer-events-none flex align-items-center justify-content-center">
         <div class="viewfinder relative">
-          <span class="corner top-left"></span>
-          <span class="corner top-right"></span>
-          <span class="corner bottom-left"></span>
-          <span class="corner bottom-right"></span>
-          <div class="laser-line"></div>
+            <span class="corner top-left"></span>
+            <span class="corner top-right"></span>
+            <span class="corner bottom-left"></span>
+            <span class="corner bottom-right"></span>
+            <div class="laser-line"></div>
         </div>
       </div>
     }
-
-    @if (permissionState() === null) {
-      <div class="absolute top-0 left-0 w-full h-full flex align-items-center justify-content-center bg-black-alpha-50 z-5">
-        <i class="pi pi-spin pi-spinner text-white text-4xl"></i>
-      </div>
-    }
-
   </div>
 
   <ng-template pTemplate="footer">
-    <p-button label="Đóng" icon="pi pi-times" (click)="closeDialog()" styleClass="p-button-text"></p-button>
+    <div class="flex flex-column gap-2 w-full pt-2">
+        <div *ngIf="availableDevices().length > 0" class="w-full">
+            <select
+                class="w-full p-2 border-round border-1 border-300 text-color surface-overlay cursor-pointer"
+                style="height: 40px;"
+                [ngModel]="currentDevice()"
+                (ngModelChange)="onDeviceSelectChange($event)">
+                <option *ngFor="let device of availableDevices()" [ngValue]="device">
+                    {{ device.label || 'Camera ' + ($index + 1) }}
+                </option>
+            </select>
+        </div>
+        <p-button label="Đóng" icon="pi pi-times" (click)="closeDialog()" styleClass="p-button-text w-full"></p-button>
+    </div>
   </ng-template>
 </p-dialog>

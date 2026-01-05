@@ -30,17 +30,44 @@ export class CameraService {
   }
 
   /**
-   * Lấy chi tiết 1 camera
+   * Lấy chi tiết 1 camera (Theo ID)
    */
   getCameraById(id: number): Observable<ApiResponse<MonitorCamera>> {
     return this.http.get<ApiResponse<MonitorCamera>>(`${this.apiUrl}/${id}`);
   }
+
+  // Hàm alias (giữ lại để tương thích code cũ nếu có)
   getCamera(id: number): Observable<any> {
     return this.http.get<any>(`${this.apiUrl}/${id}`);
   }
+
+  /**
+   * Cập nhật thông tin camera (Ví dụ: Đổi tên hiển thị)
+   * API: PATCH /cameras/{id}
+   */
+  updateCamera(id: number, data: Partial<MonitorCamera>): Observable<ApiResponse<MonitorCamera>> {
+    return this.http.patch<ApiResponse<MonitorCamera>>(`${this.apiUrl}/${id}`, data);
+  }
+
+  /**
+   * Kết nối lại Camera
+   * API: POST /cameras/{id}/connect
+   */
+  connectCamera(id: number): Observable<ApiResponse<MonitorCamera>> {
+    return this.http.post<ApiResponse<MonitorCamera>>(`${this.apiUrl}/${id}/connect`, {});
+  }
+
+  /**
+   * Ngắt kết nối Camera
+   * API: POST /cameras/{id}/disconnect
+   */
+  disconnectCamera(id: number): Observable<ApiResponse<MonitorCamera>> {
+    return this.http.post<ApiResponse<MonitorCamera>>(`${this.apiUrl}/${id}/disconnect`, {});
+  }
+
   /**
    * [FIX QUAN TRỌNG] API lấy dữ liệu AI Overlay (Polling)
-   * Thêm header 'X-Skip-Loading' để Interceptor không hiện màn hình chờ
+   * Thêm header 'X-Skip-Loading' để Interceptor không hiện màn hình chờ (Loading Spinner)
    */
   getAIOverlay(id: number): Observable<any[]> {
     return this.http.get<any[]>(`${this.apiUrl}/${id}/ai-overlay`, {
@@ -49,4 +76,5 @@ export class CameraService {
       }),
     });
   }
+  
 }

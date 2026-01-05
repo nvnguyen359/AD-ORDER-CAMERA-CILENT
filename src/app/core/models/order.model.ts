@@ -3,10 +3,11 @@
 export type OrderStatus = 'PACKING' | 'PACKED' | 'ISSUE' | 'MERGED';
 
 export interface Order {
+  parent_id: number | boolean | undefined;
+  start_at(start_at: any, closed_at: string | undefined): number;
   id: number;
   code: string;
   status: OrderStatus;
-
   // Media paths (Map theo DB schema của bạn)
   path_avatar?: string;
   path_video?: string;
@@ -16,7 +17,6 @@ export interface Order {
   // Metadata
   created_at: string; // Backend trả về chuỗi ISO
   closed_at?: string;
-
   // Info
   total_amount: number;
   packer_name?: string;
@@ -24,6 +24,7 @@ export interface Order {
 
 // Interface khớp với return response_success(...) của Backend
 export interface OrderResponse {
+  code: number;
   data: Order[];
   total: number;
   page: number;

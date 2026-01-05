@@ -1,0 +1,76 @@
+:host {
+    display: block;
+    width: 100%;
+    /* [QUAN TRỌNG] Xóa dòng overflow-x: hidden đi vì nó làm hỏng sticky */
+    /* overflow-x: hidden; <--- XÓA DÒNG NÀY */
+}
+
+.dashboard-wrapper {
+    min-height: 100vh;
+    background-color: var(--surface-ground);
+    width: 100%;
+    position: relative;
+}
+
+/* --- STICKY HEADER --- */
+.sticky-header {
+    position: -webkit-sticky; /* Hỗ trợ Safari */
+    position: sticky;
+
+    /* [CHỈNH SỐ NÀY] */
+    /* Nếu Header Xanh của bạn là Fixed (luôn hiện), hãy đo chiều cao của nó (thường là 50px - 60px) */
+    /* Nếu Header Xanh bị cuộn mất, hãy để top: 0 */
+    top: 0px; /* Mình để tạm 55px (chiều cao chuẩn mobile), bạn chỉnh lại nếu cần */
+
+    z-index: 9; /* Đè lên nội dung bảng */
+
+    background-color: var(--surface-ground); /* Nền đặc để che nội dung trôi qua */
+
+    /* Border dưới mờ nhẹ để tách biệt */
+    border-bottom: 1px solid var(--surface-border);
+
+    /* Padding gọn lại */
+    padding: 0.5rem;
+
+    /* Bóng đổ nhẹ khi dính */
+    box-shadow: 0 4px 10px rgba(0,0,0,0.03);
+}
+
+/* Custom Dropdown Backdrop */
+.z-5 { z-index: 1005 !important; }
+.z-4 { z-index: 1004 !important; }
+
+/* PrimeNG Overrides */
+:host ::ng-deep {
+
+    /* Fix DatePicker full width */
+    .p-datepicker {
+        width: 100%;
+        min-width: unset !important;
+        .p-inputtext { width: 100%; }
+    }
+
+    /* Table Scroll */
+    .p-datatable-wrapper {
+        overflow-x: auto !important;
+        &::-webkit-scrollbar { height: 4px; }
+        &::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 4px; }
+    }
+
+    /* Highlight dòng lỗi */
+    .bg-red-50 {
+        background-color: #fff1f2 !important;
+        td { border-color: #fecdd3 !important; }
+    }
+
+    /* Card Padding */
+    .surface-card { transition: transform 0.2s; }
+}
+
+/* Mobile Tweaks */
+@media screen and (max-width: 768px) {
+    .sticky-header {
+        /* Trên mobile header xanh thường nhỏ hơn, chỉnh lại top cho khớp */
+        top: 0px;
+    }
+}

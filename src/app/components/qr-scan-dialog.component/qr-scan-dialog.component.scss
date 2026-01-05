@@ -1,82 +1,105 @@
 :host ::ng-deep {
-  // Loại bỏ padding mặc định của Dialog content để Camera full màn hình
   .qr-dialog-custom .p-dialog-content {
     padding: 0 !important;
     background: #000;
+    overflow: hidden;
   }
 }
 
 .scanner-container {
-  height: 400px; // Chiều cao cố định cho vùng quét
+  height: 400px; // Chiều cao cố định của khung camera
   width: 100%;
   position: relative;
   background-color: #000;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
-// Lớp phủ Overlay
+// Overlay vẫn giữ để định vị, nhưng không làm tối nữa
 .scan-overlay {
   z-index: 10;
-}
-
-// Khung ngắm (Vùng sáng ở giữa)
-.viewfinder {
-  width: 250px;
-  height: 250px;
-  position: relative;
-
-  // Mẹo CSS: Tạo nền tối xung quanh box này bằng box-shadow cực lớn
-  box-shadow: 0 0 0 1000px rgba(0, 0, 0, 0.6);
-  border-radius: 4px;
-}
-
-// --- 4 GÓC XANH ---
-.corner {
   position: absolute;
-  width: 30px;
-  height: 30px;
-  border-color: #00ff00; // Màu xanh lá hacker
-  border-style: solid;
-  border-width: 0;
-}
-
-.top-left {
-  top: -2px; left: -2px;
-  border-top-width: 4px;
-  border-left-width: 4px;
-}
-.top-right {
-  top: -2px; right: -2px;
-  border-top-width: 4px;
-  border-right-width: 4px;
-}
-.bottom-left {
-  bottom: -2px; left: -2px;
-  border-bottom-width: 4px;
-  border-left-width: 4px;
-}
-.bottom-right {
-  bottom: -2px; right: -2px;
-  border-bottom-width: 4px;
-  border-right-width: 4px;
-}
-
-// --- TIA LASER ĐỎ ---
-.laser-line {
-  position: absolute;
-  width: 100%;
-  height: 2px;
-  background: red;
-  box-shadow: 0 0 4px red;
   top: 0;
   left: 0;
-  opacity: 0.6;
-  animation: scan-animation 2s infinite linear;
+  width: 100%;
+  height: 100%;
 }
 
-// Animation chạy từ trên xuống
-@keyframes scan-animation {
+// KHUNG NGẮM (Đã mở rộng Full)
+.viewfinder {
+  width: 100%;  // [THAY ĐỔI] Full chiều rộng
+  height: 100%; // [THAY ĐỔI] Full chiều cao
+  position: relative;
+  z-index: 20;
+
+  // [QUAN TRỌNG] Đã XÓA dòng box-shadow tạo viền đen
+  // box-shadow: 0 0 0 1000px rgba(0, 0, 0, 0.6);
+
+  // --- 4 GÓC XANH (Đặt sát mép) ---
+  .corner {
+      position: absolute;
+      width: 40px;
+      height: 40px;
+      border-color: #22c55e;
+      border-style: solid;
+      border-width: 0;
+      filter: drop-shadow(0 0 2px rgba(34, 197, 94, 0.5));
+      opacity: 0.8; // Mờ nhẹ tí cho đỡ gắt
+  }
+
+  // Căn các góc lùi vào trong một chút (10px) để đẹp hơn
+  .top-left {
+      top: 10px; left: 10px;
+      border-top-width: 4px;
+      border-left-width: 4px;
+      border-top-left-radius: 4px;
+  }
+
+  .top-right {
+      top: 10px; right: 10px;
+      border-top-width: 4px;
+      border-right-width: 4px;
+      border-top-right-radius: 4px;
+  }
+
+  .bottom-left {
+      bottom: 10px; left: 10px;
+      border-bottom-width: 4px;
+      border-left-width: 4px;
+      border-bottom-left-radius: 4px;
+  }
+
+  .bottom-right {
+      bottom: 10px; right: 10px;
+      border-bottom-width: 4px;
+      border-right-width: 4px;
+      border-bottom-right-radius: 4px;
+  }
+
+  // --- TIA LASER ---
+  .laser-line {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 4px;
+
+      background: linear-gradient(to right, transparent 5%, #ef4444 50%, transparent 95%);
+      box-shadow: 0 0 15px rgba(239, 68, 68, 0.8), 0 0 5px #ef4444;
+
+      z-index: 30;
+      border-radius: 50%;
+
+      // Animation chạy hết chiều cao khung
+      animation: scan-full-height 3s linear infinite;
+  }
+}
+
+// [THAY ĐỔI] Animation chạy từ 0 đến 100% chiều cao (400px)
+@keyframes scan-full-height {
   0% {
-    top: 0%;
+    transform: translateY(0);
     opacity: 0;
   }
   10% {
@@ -86,7 +109,7 @@
     opacity: 1;
   }
   100% {
-    top: 100%;
+    transform: translateY(400px); // Chạy hết khung 400px
     opacity: 0;
   }
 }

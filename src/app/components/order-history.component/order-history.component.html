@@ -1,0 +1,115 @@
+<div class="history-container flex flex-column gap-0 pb-4">
+  @for (group of sessionGroups(); track group.rootId) {
+  <div class="session-wrapper w-full">
+    <div class="surface-card border-round-xl shadow-2 overflow-hidden border-1 surface-border">
+
+      <div
+        class="p-3 bg-blue-50 border-bottom-1 border-blue-100 flex justify-content-between align-items-center cursor-pointer hover:bg-blue-100 transition-colors"
+        (click)="toggleExpand(group, $event)">
+
+        <div class="flex gap-3 align-items-center overflow-hidden">
+          <p-avatar [image]="getAvatar(group.latestOrder.path_avatar)" shape="circle" size="large"
+            styleClass="bg-white flex-shrink-0"></p-avatar>
+
+          <div class="flex flex-column min-w-0 gap-1">
+            <div class="flex align-items-center gap-2">
+              <span class="font-bold text-primary-600 text-xl white-space-nowrap overflow-hidden text-overflow-ellipsis">{{
+                group.latestOrder.code }}</span>
+
+              <i *ngIf="group.latestOrder.status === 'packed'"
+                class="pi pi-check-circle text-green-500 text-xl cursor-pointer" pTooltip="Đã hoàn thành (Packed)"
+                tooltipPosition="right"></i>
+
+              <i *ngIf="group.latestOrder.status === 'packing'"
+                class="pi pi-spin pi-spinner text-blue-500 text-xl cursor-pointer" pTooltip="Đang đóng gói (Packing)"
+                tooltipPosition="right"></i>
+
+              <i *ngIf="group.latestOrder.status !== 'packed' && group.latestOrder.status !== 'packing'"
+                class="pi pi-stop-circle text-gray-400 text-xl cursor-pointer" pTooltip="Đã kết thúc (Closed/Error)"
+                tooltipPosition="right"></i>
+            </div>
+
+            <div class="text-sm text-gray-600 flex align-items-center gap-2 flex-wrap">
+              <span class="font-medium text-gray-800 bg-white px-2 py-0 border-round shadow-sm">
+                <i class="pi pi-calendar mr-1 text-xs"></i>{{ group.dateLabel }}
+              </span>
+              <span class="hidden sm:inline opacity-60">•</span>
+
+              <span><i class="pi pi-user mr-1"></i>{{ group.latestOrder.packer_name || '#' + group.latestOrder.user_id
+                }}</span>
+              <span class="opacity-60">•</span>
+              <span>{{ group.totalSteps }} bước</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="flex align-items-center gap-3 flex-shrink-0">
+          <button pButton icon="pi pi-play" [rounded]="true" class="btn-play-gradient shadow-2"
+            pTooltip="Xem video mới nhất" tooltipPosition="left"
+            (click)="$event.stopPropagation(); viewDetail(group.latestOrder)">
+          </button>
+
+          <i class="pi text-gray-500 text-lg transition-transform duration-200"
+            [ngClass]="group.isExpanded ? 'pi-chevron-up' : 'pi-chevron-down'"></i>
+        </div>
+      </div>
+
+      <div class="p-3 pt-0 relative bg-white transition-all duration-300 ease-in-out" *ngIf="group.isExpanded">
+
+        <div class="timeline-line"></div>
+
+        <div class="flex flex-column gap-0">
+          @for (step of group.steps; track step.data.id; let isLast = $last) {
+          <div class="timeline-item flex gap-3 pt-3 relative z-0">
+
+            <div class="flex flex-column align-items-center" style="width: 3rem;">
+              <span class="text-sm font-bold text-gray-600 mb-1 bg-white px-1 z-1">{{ step.timeStr }}</span>
+              <div
+                class="w-2rem h-2rem border-circle border-1 flex align-items-center justify-content-center shadow-1 bg-white z-1"
+                [ngClass]="{
+                                            'border-green-500 text-green-600': step.data.status === 'packed',
+                                            'border-gray-300 text-gray-400': step.data.status !== 'packed',
+                                            'bg-orange-50 border-orange-400': step.isCodeChanged
+                                         }">
+                <i class="pi text-sm" [ngClass]="step.data.parent_id ? 'pi-replay' : 'pi-box'"></i>
+              </div>
+            </div>
+
+            <div class="flex-grow-1 min-w-0 pb-3 border-bottom-1 surface-border" [class.border-none]="isLast">
+              <div class="flex justify-content-between align-items-start">
+                <div class="flex flex-column gap-2">
+                  <div *ngIf="step.isCodeChanged"
+                    class="inline-flex align-items-center gap-2 bg-orange-50 text-orange-800 text-sm px-2 py-1 border-round font-bold border-1 border-orange-200 w-fit">
+                    <i class="pi pi-exclamation-triangle text-orange-600"></i> Đổi mã: {{ step.data.code }}
+                  </div>
+
+                  <div *ngIf="!step.isCodeChanged && step.data.code !== group.latestOrder.code"
+                    class="text-sm text-green-600 font-medium">
+                    {{ step.data.code }}
+                  </div>
+
+                  <div class="text-sm text-gray-700 bg-gray-50 p-2 border-round border-1 surface-border line-height-3">
+                    {{ step.data.note || 'Không có ghi chú' }}
+                  </div>
+                </div>
+
+                <button pButton icon="pi pi-play" [rounded]="true" class="btn-play-mini shadow-1 flex-shrink-0 ml-2"
+                  pTooltip="Xem video bước này" tooltipPosition="left" (click)="viewDetail(step.data)">
+                </button>
+              </div>
+            </div>
+          </div>
+          }
+        </div>
+      </div>
+
+    </div>
+  </div>
+  }
+
+  <div id="scroll-sentinel" class="h-2rem w-full flex justify-content-center align-items-center">
+    @if (isLoadingMore) {
+    <i class="pi pi-spin pi-spinner text-primary text-2xl"></i>
+    }
+  </div>
+</div>

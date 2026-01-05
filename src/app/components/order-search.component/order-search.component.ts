@@ -6,6 +6,7 @@ import {
   signal,
   computed,
   ViewEncapsulation,
+  input,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -69,7 +70,7 @@ export class OrderSearchComponent {
   // --- OUTPUTS ---
   @Output() filterChange = new EventEmitter<FilterState>();
   @Output() openQrScanner = new EventEmitter<void>();
-
+  isShowFilter = input<boolean>(true);
   // --- SIGNALS & STATE ---
   suggestions = signal<Order[]>([]);
   activePreset = signal<string>('today');
@@ -210,7 +211,7 @@ export class OrderSearchComponent {
   // 3. LOGIC DATE FILTER
   // ==========================================
   selectPreset(value: string) {
-    console.log(value)
+    console.log(value);
     this.activePreset.set(value);
     this.rangeDates = undefined;
     this.emitCurrentState();

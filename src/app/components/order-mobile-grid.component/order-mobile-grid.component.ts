@@ -31,7 +31,7 @@ import { TimeFormatPipe } from '../../shared/pipes/time-format-pipe';
     CommonModule, FormsModule,
     ButtonModule, InputTextModule, IconFieldModule, InputIconModule,
     TagModule, PaginatorModule, ImageModule, SkeletonModule,
-    FormatDatePipe, OrderStatusPipe, TimeFormatPipe
+    OrderStatusPipe, TimeFormatPipe
   ],
   templateUrl: './order-mobile-grid.component.html',
   styleUrls: ['./order-mobile-grid.component.scss']

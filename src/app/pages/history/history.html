@@ -1,7 +1,40 @@
-<app-order-search (filterChange)="filterChange($event)"></app-order-search>
-<app-order-list #orderList (playVideo)="eventPlayVideo($event)"></app-order-list>
-<!-- <app-order-mobile-grid #mobileGrid></app-order-mobile-grid> -->
- <app-order-video-audit
-    [visible]="isAuditDialogVisible"
-    [config]="auditConfig" (visibleChange)="visibleChangeClosed($event)">
-</app-order-video-audit>
+<div class="flex flex-column h-full">
+
+    <app-order-search (filterChange)="filterChange($event)"></app-order-search>
+
+    <div class="flex-grow-1 overflow-y-auto p-3 bg-gray-50 relative" id="history-scroll-container">
+
+        @if (isLoading()) {
+            <div class="flex flex-column gap-3">
+                <div class="surface-card border-round-xl h-8rem w-full shadow-1 animate-pulse bg-white"></div>
+                <div class="surface-card border-round-xl h-8rem w-full shadow-1 animate-pulse bg-white"></div>
+                <div class="surface-card border-round-xl h-8rem w-full shadow-1 animate-pulse bg-white"></div>
+            </div>
+        } @else {
+
+            @if (orders().length > 0) {
+                <app-order-history
+                    [orders]="orders()"
+                    [isLoadingMore]="isLoadingMore()"
+                    [hasMoreData]="hasMoreData()"
+                    (loadMore)="onLoadMore()">
+                </app-order-history>
+            }
+
+            @if (hasSearched() && orders().length === 0) {
+                <div class="flex flex-column align-items-center justify-content-center py-8 text-gray-400">
+                    <i class="pi pi-inbox text-5xl mb-3 opacity-50"></i>
+                    <span class="text-lg font-medium">Không tìm thấy đơn hàng nào</span>
+                    <span class="text-sm mt-1">Thử tìm với mã vận đơn khác</span>
+                </div>
+            }
+
+            @if (!hasSearched()) {
+                <div class="flex flex-column align-items-center justify-content-center py-8 text-gray-400">
+                    <i class="pi pi-search text-5xl mb-3 opacity-30"></i>
+                    <span class="text-sm">Nhập mã vận đơn để bắt đầu tra cứu</span>
+                </div>
+            }
+        }
+    </div>
+</div>

@@ -1,0 +1,87 @@
+<div class="box-search-wrapper">
+  <p-inputGroup class="search-group">
+    <p-inputGroupAddon class="bg-transparent border-none p-0 pl-2">
+      <i class="pi pi-search text-500"></i>
+    </p-inputGroupAddon>
+
+    <p-autoComplete
+      [(ngModel)]="selectedCode"
+      [suggestions]="suggestions()"
+      (completeMethod)="searchOrders($event)"
+      (onSelect)="onOrderSelect($event)"
+      (onClear)="onClearSearch()"
+      field="code"
+      placeholder="Tìm đơn hàng, SĐT..."
+      [delay]="400"
+      [minLength]="1"
+      styleClass="w-full border-none"
+      inputStyleClass="w-full border-none shadow-none text-base bg-transparent p-2"
+      panelStyleClass="box-search-panel"
+      [showClear]="false">
+
+      <ng-template let-order pTemplate="item">
+        <div class="flex align-items-center gap-3 p-1">
+          <div class="w-2rem h-2rem border-circle overflow-hidden flex align-items-center justify-content-center bg-gray-100 border-1 border-300 flex-shrink-0">
+            @if (order.path_avatar) {
+              <img [src]="getFullUrl(order.path_avatar)" class="w-full h-full object-cover" alt="avt"/>
+            } @else {
+              <i class="pi pi-box text-500"></i>
+            }
+          </div>
+          <div class="flex flex-column gap-1 overflow-hidden">
+            <span class="font-bold text-900 line-height-1" [innerHTML]="highlightText(order.code)"></span>
+            @if (order.packer_name) {
+              <span class="text-xs text-500" [innerHTML]="highlightText(order.packer_name)"></span>
+            }
+          </div>
+        </div>
+      </ng-template>
+
+      <ng-template pTemplate="empty">
+        <div class="p-3 text-center text-500 text-sm">Không tìm thấy kết quả</div>
+      </ng-template>
+    </p-autoComplete>
+
+    @if (selectedCode || searchKeyword()) {
+      <button pButton type="button" icon="pi pi-times"
+              class="p-button-rounded p-button-text p-button-secondary p-button-sm w-2rem h-2rem mr-1"
+              (click)="onClearSearch()">
+      </button>
+    }
+
+    <button pButton type="button" icon="pi pi-qrcode"
+            class="p-button-text p-button-primary border-round-right-2xl"
+            pTooltip="Quét mã QR" tooltipPosition="bottom"
+            (click)="showQrDialog = true">
+    </button>
+  </p-inputGroup>
+</div>
+
+<app-qr-scan-dialog
+    [(visible)]="showQrDialog"
+    (scanSuccess)="onQrScanSuccess($event)">
+</app-qr-scan-dialog>
+
+<p-toast position="top-center"></p-toast>
+
+<p-dialog
+    [(visible)]="showDetailDialog"
+    [modal]="true"
+    [style]="{width: '95vw', maxWidth: '1400px', height: '90vh'}"
+    [maximizable]="true"
+    [draggable]="false"
+    [resizable]="false"
+    [dismissableMask]="true"
+    [showHeader]="true"
+    [header]="header"
+    styleClass="order-detail-dialog">
+
+    <ng-template pTemplate="content">
+        <app-order-detail
+            *ngIf="showDetailDialog"
+            [inputCode]="foundOrderCode"
+            [isDialogMode]="true">
+        </app-order-detail>
+    </ng-template>
+
+</p-dialog>
