@@ -19,10 +19,12 @@ export const routes: Routes = [
   {
     path: 'settings',
     loadComponent: () => import('./pages/settings/settings').then((m) => m.SettingsComponent),
+    canActivate: [authGuard]
   },
    {
     path: '',
     loadComponent: () => import('./pages/monitor/monitor').then((m) => m.MonitorComponent),
+    canActivate: [authGuard]
   },
   {
     path: 'admin',

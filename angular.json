@@ -6,7 +6,7 @@
   },
   "newProjectRoot": "projects",
   "projects": {
-    "AD-ORDER-CAMERA-CILENT": {
+    "OC-CILENT": {
       "projectType": "application",
       "schematics": {
         "@schematics/angular:component": {
@@ -20,7 +20,10 @@
         "build": {
           "builder": "@angular/build:application",
           "options": {
+            "outputPath": "../OC-BACKEND/client",
+            "index": "src/index.html",
             "browser": "src/main.ts",
+            "polyfills": [],
             "tsConfig": "tsconfig.app.json",
             "inlineStyleLanguage": "scss",
             "assets": [
@@ -28,10 +31,7 @@
                 "glob": "**/*",
                 "input": "public"
               },
-              {
-                "glob": "**/*",
-                "input": "public"
-              },"src/assets"
+              "src/assets"
             ],
             "styles": [
               "src/styles.scss",
@@ -44,13 +44,13 @@
               "budgets": [
                 {
                   "type": "initial",
-                  "maximumWarning": "500kB",
-                  "maximumError": "1MB"
+                  "maximumWarning": "2MB",
+                  "maximumError": "4MB"
                 },
                 {
                   "type": "anyComponentStyle",
-                  "maximumWarning": "4kB",
-                  "maximumError": "8kB"
+                  "maximumWarning": "10kB",
+                  "maximumError": "20kB"
                 }
               ],
               "outputHashing": "all"
@@ -67,10 +67,10 @@
           "builder": "@angular/build:dev-server",
           "configurations": {
             "production": {
-              "buildTarget": "AD-ORDER-CAMERA-CILENT:build:production"
+              "buildTarget": "OC-CILENT:build:production"
             },
             "development": {
-              "buildTarget": "AD-ORDER-CAMERA-CILENT:build:development"
+              "buildTarget": "OC-CILENT:build:development"
             }
           },
           "defaultConfiguration": "development"
