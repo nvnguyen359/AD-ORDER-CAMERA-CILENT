@@ -65,8 +65,12 @@ export class MonitorComponent implements OnInit, OnDestroy {
   loadCameras() {
     this.cameraService.getAllCameras().subscribe((res) => {
       setTimeout(() => {
-        this.cameras.set(res.data);
-
+        console.log(res.data)
+        res.data= Array.from(res.data).map((e:any)=>{
+          e.display_name= e.display_name?e.display_name:e.name;
+          return e;
+        })
+        this.cameras.set(res.data)
         // Tự động chọn cam đầu tiên nếu chưa chọn
         if (!this.selectedCamera() && res.data.length > 0) {
           this.selectCamera(res.data[0]);
@@ -93,7 +97,6 @@ export class MonitorComponent implements OnInit, OnDestroy {
             start_time: new Date(order.created_at), // Hoặc order.start_at
             avatar: this.resolveAvatar(order.path_avatar || order.full_avatar_path)
           }));
-
           // Cập nhật vào Signal
           this.activePackingOrders.set(mappedOrders);
         }
