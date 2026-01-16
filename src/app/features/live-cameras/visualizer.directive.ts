@@ -6,9 +6,9 @@ import { Directive, ElementRef, Input, OnChanges, SimpleChanges, Renderer2 } fro
 })
 export class VisualizerDirective implements OnChanges {
   @Input() metadata: any[] = [];
-  @Input() imgWidth: number = 0;
-  @Input() imgHeight: number = 0;
-  @Input() mode: string = 'normal'; // normal | scan | security | both
+  @Input() imgWidth: number = 1280;
+  @Input() imgHeight: number = 720;
+  @Input() mode: string = 'both';
 
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D | null = null;
@@ -20,84 +20,65 @@ export class VisualizerDirective implements OnChanges {
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['imgWidth'] || changes['imgHeight']) {
-        this.resizeCanvas();
+      this.renderer.setAttribute(this.canvas, 'width', this.imgWidth.toString());
+      this.renderer.setAttribute(this.canvas, 'height', this.imgHeight.toString());
     }
-    // Vẽ lại khi bất kỳ dữ liệu nào thay đổi
-    if (changes['metadata'] || changes['imgWidth'] || changes['imgHeight'] || changes['mode']) {
-      this.draw();
-    }
-  }
-
-  private resizeCanvas() {
-    if (this.imgWidth && this.imgHeight) {
-        this.renderer.setAttribute(this.canvas, 'width', this.imgWidth.toString());
-        this.renderer.setAttribute(this.canvas, 'height', this.imgHeight.toString());
-    }
+    this.draw();
   }
 
   private draw() {
     if (!this.ctx || !this.canvas) return;
 
-    // 1. Xóa sạch Canvas
+    // 1. Luôn xóa sạch canvas trước khi vẽ
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
-    // [LOGIC] Normal -> Không vẽ gì cả
-    if (this.mode === 'normal') return;
+    if (this.mode === 'NONE' || !this.metadata || this.metadata.length === 0) return;
 
-    if (!this.metadata || this.metadata.length === 0) return;
-
-    this.ctx.lineWidth = 1; // Nét vẽ dày
-    this.ctx.font = "bold 16px Arial";
+    // 2. Cấu hình nét vẽ mảnh, đẹp (như dự án cũ)
+    this.ctx.lineWidth = 2;
+    this.ctx.font = "bold 16px Segoe UI, Arial";
+    this.ctx.textBaseline = 'bottom';
 
     this.metadata.forEach(item => {
-        if (!item) return;
+      if (!item) return;
 
-        // Lấy tọa độ
-        let x, y, w, h;
-        if (item.box && Array.isArray(item.box)) { [x, y, w, h] = item.box; }
-        else { x = item.x; y = item.y; w = item.w; h = item.h; }
+      let x, y, w, h;
+      if (item.box && Array.isArray(item.box)) {
+        [x, y, w, h] = item.box;
+      } else {
+        x = item.x; y = item.y; w = item.w; h = item.h;
+      }
 
-        if (x === undefined || y === undefined || w === undefined || h === undefined) return;
+      // 3. Chỉ kiểm tra tính hợp lệ cơ bản, KHÔNG tự ý sửa toạ độ
+      if (x === undefined || y === undefined || w <= 0 || h <= 0) return;
 
-        // Lấy màu và nhãn
-        const color = item.color || '#3498db';
-        const label = item.label || 'Object';
+      const color = item.color || '#3498db';
+      const label = item.label || 'Object';
+      const isQR = (color === '#2ecc71') || label.includes('QR');
+      const isHuman = (color === '#e74c3c') || label.includes('Human') || label.includes('Person');
 
-        // [FIX QUAN TRỌNG] Nhận diện loại đối tượng dựa trên MÀU SẮC (Chính xác hơn dựa vào tên)
-        // Backend: QR = #2ecc71 (Xanh lá), Người = #e74c3c (Đỏ)
-        const isQR = (color === '#2ecc71') || label.includes('QR') || label.includes('Code');
-        const isHuman = (color === '#e74c3c') || label.includes('Human') || label.includes('Person');
+      if (this.mode === 'scan' && !isQR) return;
+      if (this.mode === 'security' && !isHuman) return;
 
-        // [LOGIC LỌC HIỂN THỊ]
-        if (this.mode === 'scan' && !isQR) return;         // Scan -> Chỉ hiện QR
-        if (this.mode === 'security' && !isHuman) return;  // Security -> Chỉ hiện Người
-        // Mode 'both' -> Hiện tất cả
+      // Vẽ Khung
+      this.ctx!.strokeStyle = color;
+      this.ctx!.beginPath();
+      this.ctx!.rect(x, y, w, h);
+      this.ctx!.stroke();
 
-        // --- BẮT ĐẦU VẼ ---
-        this.ctx!.strokeStyle = color;
-        this.ctx!.fillStyle = color;
+      // Tô nền mờ (10%)
+      this.ctx!.fillStyle = color;
+      this.ctx!.globalAlpha = 0.1;
+      this.ctx!.fillRect(x, y, w, h);
+      this.ctx!.globalAlpha = 1.0;
 
-        // Nếu là QR Code -> Tô nền mờ
-        if (isQR) {
-            this.fillTransparent(x, y, w, h, 0.2);
-        }
+      // Vẽ Nhãn
+      const textWidth = this.ctx!.measureText(label).width;
+      this.ctx!.fillStyle = color;
+      this.ctx!.fillRect(x, y - 24, textWidth + 10, 24);
 
-        // Vẽ khung
-        this.ctx!.strokeRect(x, y, w, h);
-
-        // Vẽ Nhãn
-        const textWidth = this.ctx!.measureText(label).width;
-        this.ctx!.fillRect(x, y - 28, textWidth + 14, 28); // Nền chữ
-
-        this.ctx!.fillStyle = '#ffffff';
-        this.ctx!.fillText(label, x + 7, y - 8); // Chữ trắng
+      this.ctx!.fillStyle = '#ffffff';
+      this.ctx!.fillText(label, x + 5, y - 5);
     });
-  }
-
-  private fillTransparent(x: number, y: number, w: number, h: number, alpha: number) {
-      if (!this.ctx) return;
-      this.ctx.globalAlpha = alpha;
-      this.ctx.fillRect(x, y, w, h);
-      this.ctx.globalAlpha = 1.0;
   }
 }

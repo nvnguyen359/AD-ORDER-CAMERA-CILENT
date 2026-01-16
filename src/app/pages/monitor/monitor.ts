@@ -1,16 +1,15 @@
 import { Component, OnInit, OnDestroy, signal, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-
-import { CameraService } from '../../core/services/camera.service';
-import { StreamService } from '../../core/services/stream.service';
-import { OrderService } from '../../core/services/order.service'; // 1️⃣ Import OrderService
-import { StorageService } from '../../core/services/storage.service';
-import { environment } from '../../environments/environment';
-
 import { Subscription } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
 import { TooltipModule } from 'primeng/tooltip';
 import { ScrollPanelModule } from 'primeng/scrollpanel';
+
+import { CameraService } from '../../core/services/camera.service';
+import { StreamService } from '../../core/services/stream.service';
+import { OrderService } from '../../core/services/order.service';
+import { StorageService } from '../../core/services/storage.service';
+import { environment } from '../../environments/environment';
 import { ActivityStatsComponent } from '../../components/activity-stats.component/activity-stats.component';
 import { CameraWidgetComponent } from '../../components/camera-widget.component/camera-widget.component';
 
@@ -32,7 +31,7 @@ export class MonitorComponent implements OnInit, OnDestroy {
   private cameraService = inject(CameraService);
   private streamService = inject(StreamService);
   private storageService = inject(StorageService);
-  private orderService = inject(OrderService); // 2️⃣ Inject OrderService
+  private orderService = inject(OrderService);
 
   // --- SIGNALS ---
   cameras = signal<any[]>([]);
@@ -51,7 +50,7 @@ export class MonitorComponent implements OnInit, OnDestroy {
     // 2. Load Cameras (Và sau đó sẽ load Active Orders)
     this.loadCameras();
 
-    // 3. Lắng nghe Socket cho các sự kiện REAL-TIME
+    // 3. Lắng nghe Socket
     this.sub = this.streamService.messages$.subscribe((msg: any) => {
       this.handleSocketMessage(msg);
     });
@@ -63,41 +62,56 @@ export class MonitorComponent implements OnInit, OnDestroy {
   }
 
   loadCameras() {
-    this.cameraService.getAllCameras().subscribe((res) => {
+    this.cameraService.getAllCameras().subscribe((res: any) => {
       setTimeout(() => {
-        console.log(res.data)
-        res.data= Array.from(res.data).map((e:any)=>{
-          e.display_name= e.display_name?e.display_name:e.name;
-          return e;
-        })
-        this.cameras.set(res.data)
-        // Tự động chọn cam đầu tiên nếu chưa chọn
-        if (!this.selectedCamera() && res.data.length > 0) {
-          this.selectCamera(res.data[0]);
+        // [FIX AN TOÀN] Kiểm tra cấu trúc trả về của Camera API
+        // Nếu API trả về { data: [...] } hoặc { data: { items: [...] } }
+        let rawData = [];
+        if (Array.isArray(res.data)) {
+            rawData = res.data;
+        } else if (res.data && Array.isArray(res.data.items)) {
+            rawData = res.data.items;
+        } else {
+            rawData = res.data ? [res.data] : [];
         }
 
-        // 3️⃣ [QUAN TRỌNG] Sau khi có danh sách Camera (để lấy tên), ta load đơn đang chạy
+        const processedCameras = rawData.map((e: any) => {
+          e.display_name = e.display_name ? e.display_name : e.name;
+          return e;
+        });
+
+        this.cameras.set(processedCameras);
+
+        // Tự động chọn cam đầu tiên nếu chưa chọn
+        if (!this.selectedCamera() && processedCameras.length > 0) {
+          this.selectCamera(processedCameras[0]);
+        }
+
+        // Sau khi có danh sách Camera, load đơn đang chạy
         this.loadInitialActiveOrders();
       }, 0);
     });
   }
 
-  // 4️⃣ Hàm mới: Lấy lại các đơn hàng đang đóng gói từ DB
+  // [FIX CHÍNH] Hàm này bị lỗi map is not a function
   loadInitialActiveOrders() {
-    // Gọi API lấy đơn có status = 'packing'
-    this.orderService.getOrders({ status: 'packing', pageSize: 100 }).subscribe({
-      next: (res) => {
-        if (res.data) {
-          const mappedOrders = res.data.map((order: any) => ({
+    // 1. Đổi pageSize -> limit (cho khớp Python Backend)
+    this.orderService.getOrders({ status: 'packing', limit: 100 }).subscribe({
+      next: (res: any) => {
+        // 2. [FIX] Lấy dữ liệu từ .items
+        const orders = res.data?.items || [];
+
+        if (orders.length > 0) {
+          const mappedOrders = orders.map((order: any) => ({
             camera_id: order.camera_id,
             // Tìm tên camera dựa vào ID
             camera_name: this.cameras().find((c) => c.id === order.camera_id)?.name || `Cam ${order.camera_id}`,
             code: order.code,
             order_id: order.id,
-            start_time: new Date(order.created_at), // Hoặc order.start_at
+            start_time: new Date(order.created_at),
             avatar: this.resolveAvatar(order.path_avatar || order.full_avatar_path)
           }));
-          // Cập nhật vào Signal
+
           this.activePackingOrders.set(mappedOrders);
         }
       },
@@ -128,7 +142,6 @@ export class MonitorComponent implements OnInit, OnDestroy {
     });
   }
 
-  // --- LOGIC SOCKET ---
   private handleSocketMessage(msg: any) {
     if (!msg || !msg.event) return;
 
@@ -145,8 +158,10 @@ export class MonitorComponent implements OnInit, OnDestroy {
       this.activePackingOrders.update((list) => [newOrder, ...list]);
 
     } else if (msg.event === 'ORDER_STOPPED') {
+      // Dùng data.order_id hoặc order_id trực tiếp tùy message
+      const stopId = msg.data?.order_id || msg.order_id;
       this.activePackingOrders.update((list) =>
-        list.filter((item) => item.order_id !== msg.data.order_id)
+        list.filter((item) => item.order_id !== stopId)
       );
 
     } else if (msg.event === 'ORDER_UPDATED') {
@@ -164,13 +179,12 @@ export class MonitorComponent implements OnInit, OnDestroy {
     }
   }
 
-  // 5️⃣ Helper dùng chung để fix lỗi ảnh 404
   private resolveAvatar(path: string | null): string | null {
     if (!path) return null;
     if (path.startsWith('http')) return path;
 
-    // Xử lý path tương đối (OC_System_Data/...)
     const cleanPath = path.startsWith('/') ? path.substring(1) : path;
+    // Đảm bảo không bị double slash
     const apiUrl = environment.apiUrl.endsWith('/') ? environment.apiUrl.slice(0, -1) : environment.apiUrl;
 
     return `${apiUrl}/${cleanPath}`;
