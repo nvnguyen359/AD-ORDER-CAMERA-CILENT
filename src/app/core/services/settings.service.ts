@@ -1,63 +1,43 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { map, Observable } from 'rxjs';
 import { environment } from '../../environments/environment';
 
-export interface SystemConfig {
-  aiConfig: {
-    selectedCameraId: number | null; // Allow null
-    confidenceThreshold: number;
-    debugMode: boolean;
-    detectPerson: boolean;
-    detectQR: boolean;
-    enableROI: boolean;
-  };
-  operationConfig: {
-    idleTimeoutSeconds: number;
-    autoRecordOnQR: boolean;
-    autoSnapshot: boolean;
-    soundAlerts: boolean;
-  };
-  storageConfig: {
-    storagePath: string;
-    retentionDays: number;
-    autoCleanup: boolean;
-  };
-  times: {
-    open: string;
-    close: string;
-  };
+export interface SettingResponse {
+  code: number;
+  mes: string;
+  data: { [key: string]: string }; // Map key-value động
 }
 
 @Injectable({
   providedIn: 'root'
 })
 export class SettingsService {
-  private apiUrl = `${environment.apiUrl}`;
+  private http = inject(HttpClient);
+  private apiUrl = `${environment.apiUrl}`; // e.g., http://localhost:8000/api/v1
 
-  constructor(private http: HttpClient) {}
-
+  // Lấy danh sách camera (cho dropdown)
   getCameras(): Observable<any[]> {
     return this.http.get<any>(`${this.apiUrl}/cameras`).pipe(
       map((res: any) => {
         const list = res.data || [];
-        if (!Array.isArray(list)) return [];
-        return list.map((cam: any) => ({
-          label: cam.name || `Camera ${cam.id}`,
+        return Array.isArray(list) ? list.map((cam: any) => ({
+          label: `Camera ${cam.id}`,
           value: cam.id
-        }));
+        })) : [];
       })
     );
   }
 
-  getSettings(): Observable<SystemConfig> {
-    // [FIX QUAN TRỌNG]: Thêm pipe map để lấy res.data
-    return this.http.get<any>(`${this.apiUrl}/settings`).pipe(
-      map(res => res.data as SystemConfig)
+  // GET Settings (Trả về JSON phẳng)
+  getSettings(): Observable<{ [key: string]: string }> {
+    return this.http.get<SettingResponse>(`${this.apiUrl}/settings/`).pipe(
+      map(res => res.data)
     );
   }
 
-  saveSettings(config: any): Observable<any> {
-    return this.http.put(`${this.apiUrl}/settings`, config);
+  // POST Update Settings (Gửi JSON phẳng)
+  updateSettings(settings: any): Observable<any> {
+    return this.http.post<SettingResponse>(`${this.apiUrl}/settings/`, settings);
   }
 }

@@ -1,0 +1,121 @@
+/* settings.component.scss */
+
+/* Tổng thể container */
+.surface-section {
+  background-color: #f8fafc; /* Nền xám rất nhạt cho toàn bộ vùng */
+  min-height: 100vh;
+}
+
+/* Card Styling - Làm thẻ nổi bật và mềm mại hơn */
+::ng-deep .p-card {
+  border: none;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  border-radius: 0.75rem; /* Bo góc lớn hơn */
+  background: #ffffff;
+  transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+
+  &:hover {
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  }
+
+  .p-card-header {
+      padding: 1.5rem 1.5rem 0.5rem;
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: #334155;
+      border-bottom: 1px solid #f1f5f9; /* Đường kẻ nhẹ ngăn cách header */
+      margin-bottom: 1rem;
+  }
+
+  .p-card-body {
+      padding: 1.5rem;
+  }
+}
+
+/* Form Fields Styling */
+label {
+  display: block;
+  margin-bottom: 0.5rem;
+  color: #475569; /* Màu chữ đậm hơn xám nhạt */
+  font-weight: 500;
+  font-size: 0.95rem;
+}
+
+small {
+  display: block;
+  margin-top: 0.35rem;
+  color: #94a3b8;
+  font-size: 0.85rem;
+}
+
+/* Input Styling - PrimeNG Inputs override */
+::ng-deep .p-inputtext,
+::ng-deep .p-inputnumber-input {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border-radius: 0.5rem;
+  border: 1px solid #cbd5e1;
+  background-color: #f8fafc;
+  transition: border-color 0.2s, background-color 0.2s;
+
+  &:hover {
+      border-color: #94a3b8;
+  }
+
+  &:focus {
+      border-color: #3b82f6; /* Màu xanh PrimeNG */
+      background-color: #ffffff;
+      box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+  }
+}
+
+/* Grid Layout Improvements */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(1, minmax(0, 1fr));
+  gap: 1.5rem;
+
+  @media (min-width: 768px) {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.col-span-1 {
+  grid-column: span 1 / span 1;
+}
+
+/* Flex layout cho label và input */
+.flex-col {
+  display: flex;
+  flex-direction: column;
+}
+
+.gap-1 {
+  gap: 0.25rem;
+}
+
+.gap-4 {
+  gap: 1.5rem;
+}
+
+/* Footer Button Styling */
+.fixed-footer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background-color: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(8px); /* Hiệu ứng mờ */
+  padding: 1rem 2rem;
+  border-top: 1px solid #e2e8f0;
+  display: flex;
+  justify-content: flex-end;
+  z-index: 100;
+  box-shadow: 0 -4px 6px -1px rgba(0, 0, 0, 0.05);
+}
+
+/* Thêm padding dưới cùng cho body để không bị footer che mất content */
+:host {
+  display: block;
+  padding-bottom: 5rem;
+}

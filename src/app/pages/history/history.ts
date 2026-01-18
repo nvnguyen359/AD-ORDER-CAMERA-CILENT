@@ -3,11 +3,10 @@ import { CommonModule } from '@angular/common';
 
 // Components
 import { OrderSearchComponent } from '../../components/order-search.component/order-search.component';
-
+import { OrderHistoryComponent } from '../../components/order-history.component/order-history.component';
 
 // Services
 import { OrderService } from '../../core/services/order.service';
-import { OrderHistoryComponent } from '../../components/order-history.component/order-history.component';
 
 @Component({
   selector: 'app-history',
@@ -78,18 +77,21 @@ export class History {
    */
   private fetchData(isAppend: boolean = false) {
     // Chuẩn bị tham số gửi xuống Service
+    // FIX: Backend thường dùng page bắt đầu từ 1, currentPage bắt đầu từ 0 nên cần +1
     const apiParams = {
         ...this.currentParams,
-        page: this.currentPage,      // Backend cần hỗ trợ skip/limit hoặc page/pageSize
+        page: this.currentPage + 1,
         page_size: this.pageSize
     };
 
     this.orderService.getOrders(apiParams).subscribe({
       next: (res: any) => {
-        // Lấy mảng data từ response (hỗ trợ cả cấu trúc {data: []} hoặc {data: {data: []}})
-        const newData = Array.isArray(res.data) ? res.data : (res.data?.data || []);
+        // FIX: Lấy mảng data từ res.data.items theo đúng cấu trúc JSON backend trả về
+        const responseData = res.data || {};
+        const newData = responseData.items || [];
 
         // Kiểm tra nếu dữ liệu trả về ít hơn pageSize -> Đã hết dữ liệu
+        // (Hoặc có thể so sánh responseData.total với orders().length nếu muốn chính xác hơn)
         if (newData.length < this.pageSize) {
             this.hasMoreData.set(false);
         }

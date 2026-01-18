@@ -11,7 +11,7 @@ import {
   effect,
 } from '@angular/core';
 import { CommonModule, Location } from '@angular/common';
-import { HttpClient } from '@angular/common/http'; // [1] Import HttpClient
+import { HttpClient } from '@angular/common/http';
 import { ActivatedRoute, Router } from '@angular/router';
 
 // PrimeNG Imports
@@ -27,6 +27,8 @@ import { TooltipModule } from 'primeng/tooltip';
 import { OrderService } from '../../core/services/order.service';
 import { environment } from '../../environments/environment';
 import { OrderStatusPipe } from '../../shared/pipes/order-status-pipe';
+// [FIX] 1. Import SettingsService
+import { SettingsService } from '../../core/services/settings.service';
 
 @Component({
   selector: 'app-order-detail',
@@ -56,15 +58,21 @@ export class OrderDetailComponent implements OnInit, OnChanges {
   private router = inject(Router);
   private orderService = inject(OrderService);
   private location = inject(Location);
-  private http = inject(HttpClient); // [2] Inject HttpClient
+  private http = inject(HttpClient);
+  // [FIX] 2. Inject SettingsService
+  private settingsService = inject(SettingsService);
 
   loading = signal<boolean>(true);
-  isDownloading = signal<boolean>(false); // Thêm trạng thái đang tải
+  isDownloading = signal<boolean>(false);
   orderList = signal<any[]>([]);
   selectedOrder = signal<any>(null);
 
   isPlaying = signal<boolean>(false);
   durationString = signal<string>('');
+
+  // [FIX] 3. Thêm Signal lưu tỉ lệ khung hình (Mặc định 16/9)
+  // Biến này sẽ được bind vào [style.aspect-ratio] bên HTML
+  aspectRatio = signal<string>('16 / 9');
 
   constructor() {
     effect(() => {
@@ -74,6 +82,22 @@ export class OrderDetailComponent implements OnInit, OnChanges {
   }
 
   ngOnInit() {
+    // [FIX] 4. Gọi API lấy cấu hình width/height để tính tỉ lệ
+    this.settingsService.getSettings().subscribe({
+      next: (settings: any) => {
+        // settings trả về object dạng { camera_width: "...", ... }
+        const w = Number(settings['camera_width']);
+        const h = Number(settings['camera_height']);
+
+        if (!isNaN(w) && !isNaN(h) && w > 0 && h > 0) {
+            // Cập nhật aspect-ratio theo đúng cấu hình hệ thống
+            this.aspectRatio.set(`${w} / ${h}`);
+        }
+      },
+      error: (err) => console.warn('Không thể tải settings, dùng tỉ lệ mặc định.', err)
+    });
+
+    // Logic cũ giữ nguyên
     if (this.inputCode) {
       this.fetchOrders(this.inputCode);
     } else {
@@ -90,42 +114,39 @@ export class OrderDetailComponent implements OnInit, OnChanges {
 
   fetchOrders(code: string) {
     this.loading.set(true);
-    const apiCall = (this.orderService as any).getOrderFamily
-      ? (this.orderService as any).getOrderFamily(code)
-      : this.orderService.getOrders({ code: code });
 
-    apiCall.subscribe({
+    this.orderService.getOrders({ code: code, page: 1, page_size: 100 }).subscribe({
       next: (res: any) => {
-        if (res.code === 200 && res.data) {
-          let list = [];
-          if (Array.isArray(res.data)) list = res.data;
-          else if (res.data.data && Array.isArray(res.data.data)) list = res.data.data;
-          else list = [res.data];
+        const responseData = res.data || {};
+        let list = responseData.items || [];
 
-          this.orderList.set(list);
+        if (!list.length && Array.isArray(responseData)) {
+            list = responseData;
+        } else if (!list.length && responseData.data && Array.isArray(responseData.data)) {
+            list = responseData.data;
+        }
 
-          // Auto Play logic
-          const playIdStr = this.route.snapshot.queryParamMap.get('playId');
-          let targetOrder = null;
+        this.orderList.set(list);
 
-          if (playIdStr && list.length > 0) {
-            const playId = Number(playIdStr);
-            targetOrder = list.find((item: { id: number }) => item.id === playId);
-          }
+        const playIdStr = this.route.snapshot.queryParamMap.get('playId');
+        let targetOrder = null;
 
-          if (!targetOrder && list.length > 0) {
-            targetOrder = list[0];
-          }
+        if (playIdStr && list.length > 0) {
+          const playId = Number(playIdStr);
+          targetOrder = list.find((item: { id: number }) => item.id === playId);
+        }
 
-          if (targetOrder) {
-            this.selectOrder(targetOrder, true);
-          }
-        } else {
-          this.orderList.set([]);
+        if (!targetOrder && list.length > 0) {
+          targetOrder = list[0];
+        }
+
+        if (targetOrder) {
+          this.selectOrder(targetOrder, true);
         }
         this.loading.set(false);
       },
-      error: () => {
+      error: (err) => {
+        console.error('Order Detail API Error:', err);
         this.orderList.set([]);
         this.loading.set(false);
       },
@@ -173,29 +194,22 @@ export class OrderDetailComponent implements OnInit, OnChanges {
     this.isPlaying.set(false);
   }
 
-  // --- [FIX] DOWNLOAD VIDEO: SỬ DỤNG BLOB ĐỂ ÉP TẢI VỀ ---
   downloadVideo(order: any, event?: Event) {
     if (event) event.stopPropagation();
     if (!order?.path_video) return;
 
-    this.isDownloading.set(true); // Bật loading nếu cần hiển thị spinner
+    this.isDownloading.set(true);
     const url = this.getFullUrl(order.path_video);
     const fileName = `${order.code}_${order.id}.mp4`;
 
-    // Gọi HTTP Request để lấy file dưới dạng Blob (Nhị phân)
     this.http.get(url, { responseType: 'blob' }).subscribe({
       next: (blob) => {
-        // Tạo URL ảo từ Blob
         const objectUrl = URL.createObjectURL(blob);
-
-        // Tạo thẻ a ảo để click tải về
         const link = document.createElement('a');
         link.href = objectUrl;
         link.download = fileName;
         document.body.appendChild(link);
         link.click();
-
-        // Dọn dẹp
         document.body.removeChild(link);
         URL.revokeObjectURL(objectUrl);
         this.isDownloading.set(false);
@@ -203,7 +217,6 @@ export class OrderDetailComponent implements OnInit, OnChanges {
       error: (err) => {
         console.error('Lỗi khi tải video:', err);
         this.isDownloading.set(false);
-        // Fallback: Nếu lỗi Blob (VD: CORS chặn), đành mở tab mới
         window.open(url, '_blank');
       }
     });
@@ -226,21 +239,15 @@ export class OrderDetailComponent implements OnInit, OnChanges {
     });
   }
 
-  // --- HÀM URL CŨ (GIỮ NGUYÊN NHƯ LÚC HOẠT ĐỘNG TỐT) ---
   getFullUrl(path: string): string {
     if (!path) return '';
     if (path.startsWith('http')) return path;
 
-    // Logic cũ: Chỉ ghép baseURL + path
     const baseUrl = environment.apiUrl.endsWith('/')
         ? environment.apiUrl.slice(0, -1)
         : environment.apiUrl;
 
-    // Đảm bảo path bắt đầu bằng /
     const relative = path.startsWith('/') ? path : `/${path}`;
-
-    // Nếu path trong DB có dạng 'data/videos...', cần đảm bảo URL khớp với mount của server cũ
-    // (Thường bạn mount root hoặc data nên ghép thẳng là chạy được video)
     return `${baseUrl}${relative}`;
   }
 

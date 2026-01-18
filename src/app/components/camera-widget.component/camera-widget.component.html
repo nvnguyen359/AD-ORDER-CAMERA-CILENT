@@ -6,98 +6,86 @@
     'status-warning': isTimeoutWarning()
   }">
 
-  <div class="header flex justify-content-between align-items-center p-3 bg-gray-900 text-white border-bottom-1 border-gray-800">
-    <div class="flex align-items-center gap-2 overflow-hidden">
-      <i class="pi pi-camera text-xl text-primary-400 flex-shrink-0"></i>
-      <span class="font-bold text-lg white-space-nowrap">{{ cameraName }}</span>
-      <span class="px-2 py-1 border-round text-xs font-bold transition-colors flex-shrink-0"
+  <div class="header flex justify-content-between align-items-center">
+    <div class="flex align-items-center gap-3 overflow-hidden">
+      <i class="pi pi-camera text-xl text-primary-400"></i>
+      <div class="flex flex-column">
+        <span class="font-bold text-base white-space-nowrap">{{ cameraName }}</span>
+        <span class="text-xs text-gray-400" *ngIf="isStreaming()">{{ imgWidth() }}x{{ imgHeight() }}</span>
+      </div>
+      <span class="px-2 py-1 border-round-md text-xs font-bold uppercase tracking-wide"
         [class.bg-green-500]="isStreaming()" [class.bg-red-500]="!isStreaming()">
         {{ isStreaming() ? 'LIVE' : 'OFFLINE' }}
       </span>
     </div>
-<!-- 
-    <div class="flex align-items-center gap-2">
-      <div *ngIf="qrCode!=''" class="qr-code ml-2" pTooltip="Mã hiện tại">
-        <i class="pi pi-qrcode text-lg"></i>
-        <div>{{qrCode}}</div>
-      </div>
-      <div *ngIf="scannedCode()" class="scan-result-badge px-2 py-1 border-round-sm text-white font-bold text-sm flex align-items-center gap-2 animate-scan-pulse">
-        <i class="pi pi-qrcode text-xs"></i><span>{{ scannedCode() }}</span>
-      </div>
-      <div *ngIf="orderCode()" class="px-3 py-1 border-round-md bg-bluegray-700 text-white font-bold text-sm shadow-2 flex align-items-center gap-2 animate-order-pulse">
-        <i class="pi pi-box text-xs"></i><span>{{ orderCode() }}</span>
-      </div>
-    </div> -->
   </div>
 
-  <div #viewport class="viewport relative bg-black overflow-hidden group select-none flex align-items-center justify-content-center"
+  <div #viewport class="viewport group select-none"
+    [style.aspect-ratio]="isFullscreen() ? 'unset' : aspectRatio()"
     (mousemove)="onUserInteraction()"
     (mouseleave)="onMouseLeave()"
     (click)="onViewportClick($event)">
 
-    <div class="loading-layer absolute top-0 left-0 w-full h-full z-5" [class.hidden]="!isLoading()">
+    <div class="loading-layer" [class.hidden]="!isLoading()">
       <div class="flex flex-column align-items-center gap-3">
-        <i class="pi pi-spin pi-spinner text-4xl text-primary"></i>
+        <i class="pi pi-spin pi-spinner text-5xl text-primary"></i>
+        <span class="text-gray-300 text-sm">Đang kết nối...</span>
       </div>
     </div>
 
     <div *ngIf="!isStreaming() && !isLoading()"
-      class="absolute top-0 left-0 w-full h-full flex justify-content-center align-items-center bg-black-alpha-90 z-1">
-      <i class="pi pi-video text-8xl text-gray-800 opacity-20"></i>
+      class="absolute inset-0 flex flex-column justify-content-center align-items-center bg-gray-900 z-1">
+      <i class="pi pi-video-slash text-6xl text-gray-700 mb-3"></i>
+      <span class="text-gray-600 font-medium">Mất tín hiệu</span>
     </div>
 
-    <div class="play-overlay absolute top-0 left-0 w-full h-full flex justify-content-center align-items-center pointer-events-none transition-opacity duration-300 z-5"
-      [class.opacity-0]="isStreaming() && !showControls()" [class.opacity-100]="!isStreaming() || showControls()">
-      <div class="play-btn bg-black-alpha-50 border-circle w-5rem h-5rem flex justify-content-center align-items-center border-2 border-white-alpha-30 backdrop-blur-sm shadow-4">
-        <i class="pi text-4xl text-white" [class.pi-play]="!isStreaming()" [class.pi-pause]="isStreaming()"></i>
+    <div class="play-overlay"
+      [class.opacity-0]="isStreaming() && !showControls()"
+      [class.opacity-100]="!isStreaming() || showControls()">
+      <div class="play-btn shadow-4">
+        <i class="pi" [class.pi-play]="!isStreaming()" [class.pi-pause]="isStreaming()"></i>
       </div>
     </div>
 
     <ng-container *ngIf="isStreaming()">
-      <div class="relative inline-block"
-           style="width: fit-content; height: fit-content; margin: auto; line-height: 0;">
-
-        <img [src]="streamUrl()"
-             (load)="onImageLoad($event)"
-             (error)="onImageError($event)"
-             class="block"
-             style="max-width: 100%; max-height: 100%; height: auto; object-fit: contain;"
-             alt="Stream">
+      <div class="stream-wrapper">
+        <img [src]="streamUrl()" (load)="onImageLoad($event)" (error)="onImageError($event)" alt="Stream">
 
         <canvas appVisualizer
-                [metadata]="visibleOverlayData()"
-                [imgWidth]="imgWidth()"
-                [imgHeight]="imgHeight()"
-                [mode]="viewMode() === 'ALL' ? 'both' : (viewMode() === 'QRCODE' ? 'scan' : 'security')"
-                class="absolute top-0 left-0 w-full h-full pointer-events-none">
+            [metadata]="visibleOverlayData()"
+            [imgWidth]="imgWidth()"
+            [imgHeight]="imgHeight()"
+            [mode]="viewMode() === 'ALL' ? 'both' : (viewMode() === 'QRCODE' ? 'scan' : 'security')">
         </canvas>
-
       </div>
     </ng-container>
-
   </div>
 
-  <div class="footer flex justify-content-between align-items-center p-2 bg-gray-900 border-top-1 border-gray-800" (click)="$event.stopPropagation()">
+  <div class="footer flex justify-content-between align-items-center" (click)="$event.stopPropagation()">
     <div class="mode-selector">
       <p-select [options]="viewOptions" [ngModel]="viewMode()" (onChange)="viewMode.set($event.value)"
         optionLabel="label" optionValue="value" [disabled]="!isStreaming()" appendTo="body" styleClass="custom-select"
         panelStyleClass="custom-select-panel">
         <ng-template pTemplate="selectedItem" let-selected>
-           <div class="flex align-items-center gap-2" *ngIf="selected"><i [class]="selected.icon"></i><span class="font-bold text-sm">{{ selected.label }}</span></div>
+           <div class="flex align-items-center gap-2" *ngIf="selected"><i [class]="selected.icon"></i><span class="font-medium text-sm">{{ selected.label }}</span></div>
         </ng-template>
         <ng-template pTemplate="item" let-option>
            <div class="flex align-items-center gap-2"><i [class]="option.icon"></i><span class="text-sm">{{ option.label }}</span></div>
         </ng-template>
       </p-select>
     </div>
+
     <div class="flex gap-2">
-      <button class="p-button p-component p-button-rounded p-button-text" [class]="recordBtnClass()" [disabled]="!isStreaming()" [pTooltip]="recordBtnTooltip()" (click)="toggleRecording($event)">
-        <i [class]="recordBtnIcon()"></i>
+      <button class="p-button p-button-rounded p-button-text text-gray-300 hover:text-white hover:bg-gray-800"
+        [class.text-red-500]="isRecording()"
+        [disabled]="!isStreaming()" [pTooltip]="recordBtnTooltip()" (click)="toggleRecording($event)">
+        <i [class]="recordBtnIcon()" class="text-xl"></i>
       </button>
-      <button class="p-button p-component p-button-rounded p-button-text p-button-secondary" [disabled]="!isStreaming()" (click)="toggleFullscreen($event)" pTooltip="Toàn màn hình">
-        <i [class]="isFullscreen() ? 'pi pi-times' : 'pi pi-expand'"></i>
+      <button class="p-button p-button-rounded p-button-text text-gray-300 hover:text-white hover:bg-gray-800"
+        [disabled]="!isStreaming()" (click)="toggleFullscreen($event)" pTooltip="Toàn màn hình">
+        <i [class]="isFullscreen() ? 'pi pi-compress' : 'pi pi-expand'" class="text-xl"></i>
       </button>
     </div>
   </div>
 </div>
-<p-toast position="top-center" [baseZIndex]="99999" styleClass="custom-toast" style="top: 100px!important;"></p-toast>
+<p-toast position="top-center" [baseZIndex]="99999"></p-toast>

@@ -1,10 +1,13 @@
 :host {
     display: block;
-    height: 100%;
+    height: 100vh; /* [FIX] Ép chiều cao component bằng đúng màn hình */
+    overflow: hidden; /* [FIX] Cắt bỏ phần thừa, không cho scroll body */
 }
 
 .detail-wrapper {
-    min-height: 0;
+    height: 100%; /* Chiếm hết chiều cao host */
+    display: flex;
+    flex-direction: column;
     background-color: #f8fafc;
 }
 
@@ -25,30 +28,35 @@
         }
     }
 }
-.list-xxx{
-  height: 60vh;
+
+.list-xxx {
+    /* [FIX] Bỏ chiều cao cứng 60vh để nó tự co giãn theo flex */
+    /* height: 60vh; */
+    flex-grow: 1;
 }
+
 /* --- [FIX] VIDEO AREA --- */
 .video-area {
+    /* Quan trọng: Flex 1 để chiếm toàn bộ khoảng trống còn lại */
+    flex: 1 1 auto;
+
+    /* Quan trọng: min-height: 0 để cho phép co nhỏ lại khi màn hình thấp */
+    min-height: 0;
+
+    width: 100%;
     background-color: #000;
-
-    /* Desktop: Cố định chiều cao theo tỷ lệ màn hình */
-    height: 60vh;
-    min-height: 400px; /* Không bé quá */
-    max-height: 800px; /* Không to quá */
-
-    /* Quan trọng: Không cho tự giãn hết phần còn lại */
-    flex-grow: 0;
-
+    position: relative;
     display: flex;
     align-items: center;
     justify-content: center;
+    overflow: hidden;
 
     video {
         outline: none;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-        max-width: 100%;
-        max-height: 100%;
+        width: 100%;
+        height: 100%;
+        /* Đảm bảo video luôn nằm gọn trong khung, không bị méo */
+        object-fit: contain;
     }
 }
 
@@ -57,6 +65,8 @@
     background-color: #ffffff;
     box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
     z-index: 2;
+    /* Flex-none để không bị co giãn */
+    flex: 0 0 auto;
 }
 
 /* --- Timeline --- */
@@ -65,8 +75,9 @@
     box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.06);
     white-space: nowrap;
 
-    /* Đảm bảo timeline chiếm phần còn lại nhưng có thể cuộn nếu cần */
-    flex-grow: 1;
+    /* Cố định chiều cao timeline hoặc cho phép nó co giãn nhẹ */
+    flex: 0 0 auto;
+    max-height: 150px; /* Giới hạn chiều cao timeline */
     overflow-y: auto;
 }
 
@@ -146,19 +157,25 @@
 
 /* --- Responsive --- */
 @media (max-width: 991px) {
+    /* Mobile thì cho phép scroll dọc toàn trang */
+    :host {
+        height: auto;
+        overflow: auto;
+    }
+
     .detail-wrapper {
-        overflow-y: auto !important;
+        overflow-y: visible !important;
     }
 
     .flex-grow-1.lg\:flex-row {
         flex-direction: column !important;
     }
 
-    /* Mobile: Video nhỏ lại chút */
+    /* Mobile: Video fix cứng chiều cao để dễ nhìn */
     .video-area {
-        height: auto !important;
-        min-height: 35vh;
-        flex-grow: 0;
+        height: 40vh !important;
+        min-height: 250px;
+        flex: 0 0 auto; /* Không co giãn trên mobile */
     }
 
     .lg\:w-9 {
@@ -169,7 +186,7 @@
     .lg\:w-3 {
         width: 100% !important;
         height: auto !important;
-        min-height: 400px;
+        min-height: 400px; /* Chiều cao tối thiểu cho list bên dưới */
         border-left: none !important;
         border-top: 1px solid #e2e8f0;
     }

@@ -1,190 +1,133 @@
-/* =========================================
-   1. HOST & LAYOUT CHÍNH
-   ========================================= */
-:host {
-  display: block;
-  height: 100%;
-  width: 100%;
-}
+:host { display: block; width: 100%; height: 100%; }
 
 .camera-card {
-  background-color: var(--surface-card);
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-
-  /* [FIX THẨM MỸ] Bỏ viền mặc định, chỉ hiện khi có status */
-  border: 1px solid transparent;
-  position: relative;
-  overflow: hidden;
-
-  // --- CÁC TRẠNG THÁI (STATUS) ---
-  &.status-idle { border-color: transparent; }
-  &.status-buffering { border-color: #f1c40f; box-shadow: 0 0 10px rgba(241, 196, 15, 0.4); }
-  &.status-packing { border-color: #2ecc71; animation: pulse-green 2s infinite ease-in-out; }
-  &.status-warning { border-color: #e74c3c; animation: pulse-red 1.5s infinite; }
-
-  /* [FIX] Ẩn đường kẻ ở Header/Footer để giao diện phẳng, đẹp */
-  .header {
-    border-bottom: none !important;
-    background-color: #1e1e1e !important;
-    z-index: 10;
-  }
-  .footer {
-    border-top: none !important;
-    background-color: #1e1e1e !important;
-    z-index: 10;
-  }
-}
-
-/* =========================================
-   2. VIEWPORT & FULLSCREEN (TRỌNG TÂM FIX)
-   ========================================= */
-.viewport {
   position: relative;
   width: 100%;
-  flex-grow: 1;
-  min-height: 0;
-  background-color: #000;
+  height: auto;
+  border-radius: 12px;
   overflow: hidden;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  background: #000;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+  transition: box-shadow 0.3s ease;
 
-  /* [NORMAL MODE] Giữ tỉ lệ 16:9 ở chế độ thường để không vỡ giao diện */
-  aspect-ratio: 16 / 9;
+  /* Status Borders (Glowing) */
+  &.status-idle { box-shadow: 0 4px 20px rgba(0,0,0,0.2); }
+  &.status-recording { box-shadow: 0 0 0 2px #2ecc71, 0 0 20px rgba(46, 204, 113, 0.4); }
+  &.status-warning { box-shadow: 0 0 0 2px #e74c3c, 0 0 20px rgba(231, 76, 60, 0.4); }
+}
 
-  /* --- [FULLSCREEN MODE] --- */
-  &:fullscreen, &:-webkit-full-screen {
-    width: 100vw !important;
-    height: 100vh !important;
-    aspect-ratio: unset !important; /* Bỏ tỉ lệ cố định */
-    background: #000;
-    margin: 0;
-    padding: 0;
+/* --- HEADER --- */
+.camera-header {
+  position: absolute; top: 0; left: 0; width: 100%;
+  padding: 12px 16px;
+  display: flex; justify-content: space-between; align-items: center;
+  background: linear-gradient(to bottom, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0) 100%);
+  z-index: 20;
+  pointer-events: none; /* Để click xuyên qua video */
 
-    /* [FIX QUAN TRỌNG 1]
-       Target vào cái thẻ div bao quanh (có class .relative.inline-block trong HTML)
-       Phải dùng !important để đè cái style="width: fit-content" trong HTML
-    */
-    .relative.inline-block {
-      width: 100% !important;
-      height: 100% !important;
-      max-width: none !important;
-      max-height: none !important;
-      margin: 0 !important;
-      display: block !important; /* Đổi từ inline-block sang block để fill */
-    }
+  .status-dot {
+    width: 8px; height: 8px; border-radius: 50%; background: #666;
+    &.online { background: #2ecc71; box-shadow: 0 0 8px #2ecc71; }
+  }
+  .camera-name { color: #fff; font-weight: 600; text-shadow: 0 1px 2px rgba(0,0,0,0.5); font-size: 0.95rem; }
+  .res-badge { background: rgba(255,255,255,0.2); color: #ddd; font-size: 0.7rem; padding: 2px 6px; border-radius: 4px; }
 
-    /* [FIX QUAN TRỌNG 2]
-       Ép cả ẢNH và CANVAS biến dạng giống hệt nhau (Kéo dãn toàn màn hình).
-       Khi cả 2 cùng stretch 100% thì khung vẽ sẽ luôn khớp với người.
-    */
-    img, canvas {
-      width: 100% !important;
-      height: 100% !important;
-      max-width: none !important;
-      max-height: none !important;
-
-      /* fill: Kéo dãn hình lấp đầy màn hình bất kể tỉ lệ. KHÔNG CÒN VIỀN ĐEN. */
-      object-fit: fill !important;
-    }
+  .recording-badge {
+    background: rgba(231, 76, 60, 0.9); color: white;
+    padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: bold;
+    display: flex; align-items: center; gap: 6px;
+    &.pulse { animation: pulse-opacity 1.5s infinite; }
   }
 }
 
-/* --- XỬ LÝ ẢNH & CANVAS Ở CHẾ ĐỘ THƯỜNG --- */
-/* (CSS này áp dụng khi chưa fullscreen để đảm bảo ảnh nằm gọn trong wrapper) */
-.viewport ng-container .relative {
-  /* Đảm bảo canvas đè đúng lên ảnh */
-  canvas {
-    width: 100%;
-    height: 100%;
+/* --- VIEWPORT --- */
+.viewport {
+  width: 100%;
+  height: auto; /* Tự co giãn theo aspect-ratio */
+  background: #000;
+  position: relative;
+  overflow: hidden;
+  display: flex; align-items: center; justify-content: center;
+
+  &:fullscreen {
+    width: 100vw !important; height: 100vh !important;
+    .stream-wrapper { width: 100%; height: 100%; img { object-fit: contain; } }
   }
 }
 
-
-/* =========================================
-   3. UI ELEMENTS KHÁC (LOADING, BUTTONS...)
-   ========================================= */
-
-// Loading Spinner
-.loading-layer {
-  position: absolute;
-  top: 0; left: 0; width: 100%; height: 100%;
-  z-index: 50;
-  background-color: rgba(0, 0, 0, 0.4);
+.stream-wrapper {
+  width: 100%; height: 100%;
+  position: relative;
   display: flex; justify-content: center; align-items: center;
-  pointer-events: none; transition: opacity 0.3s;
-  &.hidden { opacity: 0; }
+
+  img { width: 100%; height: 100%; object-fit: contain; display: block; }
+  canvas { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; pointer-events: none; }
 }
 
-// Play Button
-.play-btn {
-  transition: transform 0.2s, background-color 0.2s;
-  .viewport:hover & { border-color: rgba(255, 255, 255, 0.8); }
-  &:active { transform: scale(0.95); }
+/* --- OVERLAYS --- */
+.overlay-layer {
+  position: absolute; inset: 0; background: #111; z-index: 10;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; color: #888;
+  &.offline { background: #1a1a1a; }
 }
 
-// Badges & Labels
-.qr-code {
-  background: linear-gradient(135deg, #00f260 0%, #0575e6 100%);
-  color: #ffffff;
-  border-radius: 6px; padding: 4px 12px;
-  font-weight: bold; font-size: 0.875rem;
-  display: flex; align-items: center; gap: 8px;
-  box-shadow: 0 0 8px rgba(0, 242, 96, 0.4);
-  animation: qrGlowPulse 2s infinite ease-in-out;
+.play-overlay {
+  position: absolute; inset: 0; z-index: 15;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(0,0,0,0.3);
+  opacity: 0; transition: opacity 0.3s;
+  pointer-events: none;
+  &.visible { opacity: 1; pointer-events: auto; }
+
+  .btn-play-big {
+    width: 64px; height: 64px; border-radius: 50%;
+    background: rgba(255,255,255,0.15); backdrop-filter: blur(4px);
+    border: 1px solid rgba(255,255,255,0.3);
+    color: white; font-size: 1.5rem; cursor: pointer;
+    transition: all 0.2s;
+    &:hover { transform: scale(1.1); background: rgba(255,255,255,0.3); }
+  }
 }
 
-.scan-result-badge {
-  background-color: rgba(255, 255, 255, 0.15);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  color: #fff; border-radius: 4px;
+/* --- CONTROLS BAR (Bottom) --- */
+.controls-bar {
+  position: absolute; bottom: 16px; left: 16px; right: 16px;
+  height: 48px;
+  background: rgba(20, 20, 20, 0.7); backdrop-filter: blur(10px);
+  border-radius: 24px;
+  border: 1px solid rgba(255,255,255,0.1);
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 0 8px;
+  z-index: 25;
+  transform: translateY(10px); opacity: 0; transition: all 0.3s;
+
+  &.visible { transform: translateY(0); opacity: 1; }
+
+  .control-group { display: flex; gap: 8px; }
+
+  .control-info {
+    color: #fff; font-size: 0.9rem; font-weight: 500;
+    text-shadow: 0 0 10px rgba(46, 204, 113, 0.5);
+  }
+
+  .btn-icon {
+    width: 36px; height: 36px; border-radius: 50%; border: none;
+    background: transparent; color: #ccc; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.2s;
+    &:hover { background: rgba(255,255,255,0.1); color: white; }
+    &.active { color: #e74c3c; background: rgba(231, 76, 60, 0.1); }
+  }
 }
 
-/* =========================================
-   4. ANIMATIONS
-   ========================================= */
-@keyframes pulse-green {
-  0% { box-shadow: 0 0 0 0 rgba(46, 204, 113, 0.4); }
-  50% { box-shadow: 0 0 8px 1px rgba(46, 204, 113, 0.2); }
-  100% { box-shadow: 0 0 0 0 rgba(46, 204, 113, 0.4); }
-}
+/* Animations */
+@keyframes pulse-opacity { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
 
-@keyframes pulse-red {
-  0% { box-shadow: 0 0 0 0 rgba(231, 76, 60, 0.7); }
-  70% { box-shadow: 0 0 0 10px rgba(231, 76, 60, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(231, 76, 60, 0); }
-}
-
-@keyframes qrGlowPulse {
-  0%, 100% { transform: scale(1); opacity: 1; }
-  50% { transform: scale(1.05); opacity: 0.95; filter: brightness(1.2); }
-}
-
-/* =========================================
-   5. PRIMENG OVERRIDES
-   ========================================= */
+/* PrimeNG Overrides */
 :host ::ng-deep {
-  .custom-select {
-    background-color: #1f2937 !important;
-    border: none !important;
-    min-width: 160px;
-    .p-select-label { color: #ffffff !important; padding: 0.5rem 0.75rem; }
-    .p-select-dropdown { color: #9ca3af !important; width: 2rem; }
-    &:not(.p-disabled):hover { background-color: #374151 !important; }
-  }
-
-  .custom-select-panel {
-    background-color: #1f2937 !important;
-    border: 1px solid #374151;
-    .p-select-option {
-      color: #e5e7eb !important;
-      &:hover { background-color: #374151 !important; color: #fff !important; }
-      &.p-select-option-selected { background-color: var(--primary-color) !important; }
-    }
+  .glass-select {
+    background: transparent !important; border: none !important; box-shadow: none !important;
+    .p-select-label { color: #fff !important; padding: 0.5rem; }
+    .p-select-dropdown { color: #fff !important; }
   }
 }
-
-.p-toast { z-index: 99999 !important; top: 100px !important; }

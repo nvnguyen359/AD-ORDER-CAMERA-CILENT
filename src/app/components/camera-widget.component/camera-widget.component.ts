@@ -25,6 +25,7 @@ import { VisualizerDirective } from '../../features/live-cameras/visualizer.dire
 import { environment } from '../../environments/environment';
 import { SharedService } from '../../core/services/sharedService';
 import { StorageService } from '../../core/services/storage.service';
+import { SettingsService } from '../../core/services/settings.service';
 
 type ViewMode = 'NONE' | 'ALL' | 'HUMAN' | 'QRCODE';
 type RecordingState = 'IDLE' | 'MANUAL' | 'AUTO';
@@ -48,11 +49,14 @@ type RecordingState = 'IDLE' | 'MANUAL' | 'AUTO';
 export class CameraWidgetComponent implements OnInit, OnDestroy {
   @Input({ required: true }) cameraId!: number;
   @Input() cameraName: string = 'Camera';
+  // [MỚI] Input để bật tự động kết nối khi chuyển Tab
+  @Input() autoConnect: boolean = false;
 
   private streamService = inject(StreamService);
   private cameraService = inject(CameraService);
   private messageService = inject(MessageService);
   private storageService = inject(StorageService);
+  private settingsService = inject(SettingsService);
 
   private sub: Subscription | null = null;
   private uiLoopInterval: any;
@@ -60,12 +64,16 @@ export class CameraWidgetComponent implements OnInit, OnDestroy {
   private scanResetTimer: any;
   private orderInfoResetTimer: any;
 
+  // --- STATE SIGNALS ---
   isStreaming = signal<boolean>(false);
   isLoading = signal<boolean>(false);
   isFullscreen = signal<boolean>(false);
   isBuffering = signal<boolean>(false);
 
+  // Trạng thái quay: IDLE (Nghỉ), AUTO (Đóng hàng), MANUAL (Quay tay)
   recordingState = signal<RecordingState>('IDLE');
+
+  // Mã đơn hàng (nếu đang quay)
   orderCode = signal<string | null>(null);
   scannedCode = signal<string | null>(null);
   qrCode = '';
@@ -75,12 +83,14 @@ export class CameraWidgetComponent implements OnInit, OnDestroy {
 
   rawOverlayData = signal<any[]>([]);
 
+  // Độ phân giải (Mặc định HD, sẽ update từ Settings)
   imgWidth = signal<number>(1280);
   imgHeight = signal<number>(720);
 
-  // Layout tính toán động (quan trọng để fix layout)
+  // Tính tỉ lệ khung hình cho CSS (16/9, 4/3...)
   aspectRatio = computed(() => `${this.imgWidth()} / ${this.imgHeight()}`);
 
+  // Logic Timeout (Cảnh báo nếu nhân viên đi vắng quá lâu)
   timeoutPercent = signal<number>(0);
   timeRemaining = signal<number>(0);
   isTimeoutWarning = computed(() => this.timeoutPercent() > 0 && this.timeoutPercent() < 30);
@@ -89,49 +99,41 @@ export class CameraWidgetComponent implements OnInit, OnDestroy {
 
   @ViewChild('viewport') viewportRef!: ElementRef;
 
+  // Biến Computed hỗ trợ HTML
   isRecording = computed(() => this.recordingState() !== 'IDLE');
-  // Thêm timestamp để ép ảnh reload, tránh cache
+  // Thêm timestamp để ép trình duyệt load lại ảnh mới khi reconnect
   streamUrl = computed(() => this.isStreaming() ? `${environment.apiUrl}/cameras/${this.cameraId}/stream?t=${Date.now()}` : '');
 
+  // Lọc dữ liệu vẽ khung (Human/QR)
   visibleOverlayData = computed(() => {
     const mode = this.viewMode();
     if (mode === 'NONE') return [];
-
     const data = this.rawOverlayData();
     if (mode === 'ALL') return data;
-
     return data.filter((item) => {
-      // Logic lọc Human/QR
       const label = item.label || '';
       const color = item.color || '';
       const isHuman = label.includes('Person') || label.includes('Human') || color === '#e74c3c';
-
       if (mode === 'HUMAN') return isHuman;
       if (mode === 'QRCODE') return !isHuman;
       return true;
     });
   });
 
+  // Icon nút quay
   recordBtnIcon = computed(() => {
     switch (this.recordingState()) {
-      case 'MANUAL': return 'pi pi-stop-circle';
-      case 'AUTO': return 'pi pi-lock';
-      default: return 'pi pi-video';
+      case 'MANUAL': return 'pi pi-stop-circle'; // Đang quay tay -> Nút Stop
+      case 'AUTO': return 'pi pi-lock';         // Đang tự động -> Khóa (ko cho tắt tay)
+      default: return 'pi pi-video';            // Nghỉ -> Nút Quay
     }
   });
 
-  recordBtnClass = computed(() => {
-    switch (this.recordingState()) {
-      case 'MANUAL': return 'p-button-danger';
-      case 'AUTO': return 'p-button-warning';
-      default: return 'p-button-secondary';
-    }
-  });
-
+  // Tooltip nút quay
   recordBtnTooltip = computed(() => {
     switch (this.recordingState()) {
       case 'MANUAL': return 'Dừng & Lưu';
-      case 'AUTO': return 'Đang quay tự động';
+      case 'AUTO': return 'Đang quay tự động theo đơn';
       default: return 'Ghi hình thủ công';
     }
   });
@@ -153,14 +155,31 @@ export class CameraWidgetComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.qrCode = this.storageService.getItem('code') ? `${this.storageService.getItem('code')}` : '';
-    this.streamService.connectSocket();
 
+    // 1. [QUAN TRỌNG] Lấy độ phân giải từ Settings ngay lập tức
+    this.settingsService.getSettings().subscribe({
+        next: (data: any) => {
+            const w = Number(data['camera_width']);
+            const h = Number(data['camera_height']);
+            if (w && h) {
+                console.log(`[Cam ${this.cameraId}] Apply Resolution: ${w}x${h}`);
+                this.imgWidth.set(w);
+                this.imgHeight.set(h);
+            }
+        },
+        error: (err) => console.warn('Load settings failed, using default 1280x720')
+    });
+
+    // 2. Kết nối Socket & Lắng nghe sự kiện
+    this.streamService.connectSocket();
     this.sub = this.streamService.getCameraStream(this.cameraId).subscribe({
       next: (msg) => this.handleMessage(msg),
       error: (err) => console.error('Stream Sub Error:', err),
     });
 
+    // 3. Kiểm tra trạng thái hiện tại (Đề phòng F5 trang lúc đang quay)
     this.fetchInitialState();
+
     document.addEventListener('fullscreenchange', () => this.isFullscreen.set(!!document.fullscreenElement));
     this.resetControlTimer();
     this.startUiLoop();
@@ -175,22 +194,13 @@ export class CameraWidgetComponent implements OnInit, OnDestroy {
     if (this.isStreaming()) this.disconnect();
   }
 
+  // =====================================================================
+  // XỬ LÝ SOCKET
+  // =====================================================================
   private handleMessage(msg: StreamMessage) {
-    // =========================================================================
-    // [FIX LỖI TS & GHOSTING]
-    // =========================================================================
-    // 1. Ép kiểu 'any' để bypass lỗi TypeScript "Property cam_id does not exist"
     const rawMsg = msg as any;
-
-    // 2. Chặn dữ liệu của Camera khác tràn vào
-    if (rawMsg.cam_id !== undefined && rawMsg.cam_id != this.cameraId) {
-        return;
-    }
-    // Check thêm nếu cam_id nằm lồng trong data (tuỳ BE trả về)
-    if (msg.data && (msg.data as any).cam_id !== undefined && (msg.data as any).cam_id != this.cameraId) {
-        return;
-    }
-    // =========================================================================
+    if (rawMsg.cam_id !== undefined && rawMsg.cam_id != this.cameraId) return;
+    if (msg.data && (msg.data as any).cam_id !== undefined && (msg.data as any).cam_id != this.cameraId) return;
 
     if (msg.metadata) {
         this.rawOverlayData.set(msg.metadata);
@@ -199,20 +209,24 @@ export class CameraWidgetComponent implements OnInit, OnDestroy {
     if (msg.event === 'QR_SCANNED' || msg.event === 'BARCODE_DETECTED') {
         const codeValue = msg.data?.code || msg.data;
         const displayValue = typeof codeValue === 'object' ? JSON.stringify(codeValue) : String(codeValue);
+
         this.scannedCode.set(displayValue);
         this.isBuffering.set(true);
-        setTimeout(() => this.isBuffering.set(false), 2000);
+        setTimeout(() => this.isBuffering.set(false), 1500);
+
         clearTimeout(this.scanResetTimer);
         this.scanResetTimer = setTimeout(() => this.scannedCode.set(null), 5000);
     }
     else if (msg.event === 'ORDER_CREATED') {
-      this.storageService.setItem('code', msg['data']['code']);
-      this.recordingState.set('AUTO');
+      console.log(`[Cam ${this.cameraId}] 🟢 Order Started:`, msg.data);
       const code = (msg.data && msg.data.order_code) ? msg.data.order_code : msg.data.code;
+      this.storageService.setItem('code', code);
+      this.recordingState.set('AUTO');
       this.orderCode.set(code || 'Auto Order');
       this.onHumanDetected();
     }
     else if (msg.event === 'ORDER_STOPPED') {
+      console.log(`[Cam ${this.cameraId}] 🔴 Order Stopped`);
       this.recordingState.set('IDLE');
       this.orderCode.set('Đã hoàn thành');
       this.storageService.removeItem('code');
@@ -222,15 +236,28 @@ export class CameraWidgetComponent implements OnInit, OnDestroy {
     }
   }
 
+  // Lấy trạng thái ban đầu từ API
   private fetchInitialState() {
     this.cameraService.getCamera(this.cameraId).subscribe({
       next: (res: any) => {
         const camData = res.data || res;
         if (camData) {
-            if (camData.is_connected) this.isStreaming.set(true);
-            if (camData.recording_state) this.recordingState.set(camData.recording_state);
+            // [NÂNG CẤP] Logic Auto Connect
+            // Backend mới sẽ trả về 'is_connected' = true nếu Worker đang chạy.
+            if (camData.is_connected) {
+                this.isStreaming.set(true);
+            } else if (this.autoConnect) {
+                // Nếu chưa chạy mà có cờ autoConnect -> Gọi API bật ngay
+                console.log(`[Cam ${this.cameraId}] 🔌 Auto Connecting...`);
+                this.toggleConnect();
+            }
+
+            if (camData.recording_state) {
+                this.recordingState.set(camData.recording_state);
+            }
+
             if (camData.recording_state === 'AUTO') {
-                this.orderCode.set(camData.active_order_code || 'Auto Recording');
+                this.orderCode.set(camData.active_order_code || 'Đang đóng gói');
                 this.onHumanDetected();
             } else if (camData.recording_state === 'MANUAL') {
                 this.orderCode.set('Thủ công');
@@ -241,9 +268,13 @@ export class CameraWidgetComponent implements OnInit, OnDestroy {
     });
   }
 
+  // --- ACTIONS ---
   toggleConnect() {
+    // Nếu đang stream -> Tắt đi (false)
+    // Nếu đang tắt -> Bật lên (true)
     const nextState = !this.isStreaming();
     if (nextState) this.isLoading.set(true);
+
     const action = nextState ? 'connect' : 'disconnect';
     this.streamService.toggleCamera(this.cameraId, action).subscribe({
       next: () => {
@@ -254,7 +285,7 @@ export class CameraWidgetComponent implements OnInit, OnDestroy {
       error: () => {
         this.isLoading.set(false);
         this.isStreaming.set(false);
-        this.messageService.add({ severity: 'error', summary: 'Lỗi', detail: 'Lỗi kết nối' });
+        this.messageService.add({ severity: 'error', summary: 'Lỗi', detail: 'Lỗi kết nối Camera' });
       },
     });
   }
@@ -265,16 +296,14 @@ export class CameraWidgetComponent implements OnInit, OnDestroy {
     if (currentState === 'AUTO') return;
 
     if (currentState === 'MANUAL') {
-      const payload = { order_code: `DH-${Date.now()}`, client_id: 1, note: 'Manual Stop' };
+      const payload = { order_code: `MANUAL-${Date.now()}`, client_id: 1, note: 'User Stopped' };
       this.orderCode.set('Đang lưu...');
       this.streamService.stopRecording(this.cameraId, payload).subscribe({
         next: () => {
           this.recordingState.set('IDLE');
-          this.orderCode.set('Hoàn thành');
-          this.timeoutPercent.set(0);
-          clearTimeout(this.orderInfoResetTimer);
-          this.orderInfoResetTimer = setTimeout(() => this.orderCode.set(null), 3000);
-          this.messageService.add({ severity: 'success', summary: 'OK', detail: 'Đã lưu video.' });
+          this.orderCode.set('Đã lưu');
+          setTimeout(() => this.orderCode.set(null), 3000);
+          this.messageService.add({ severity: 'success', summary: 'OK', detail: 'Đã lưu video thủ công.' });
         },
         error: () => this.orderCode.set('Lỗi lưu')
       });
@@ -285,7 +314,7 @@ export class CameraWidgetComponent implements OnInit, OnDestroy {
           this.orderCode.set('Thủ Công');
           this.messageService.add({ severity: 'success', summary: 'Start', detail: 'Bắt đầu ghi hình.' });
         },
-        error: () => this.messageService.add({ severity: 'error', summary: 'Lỗi', detail: 'Lỗi bắt đầu.' })
+        error: () => this.messageService.add({ severity: 'error', summary: 'Lỗi', detail: 'Không thể bắt đầu.' })
       });
     }
   }
@@ -307,6 +336,7 @@ export class CameraWidgetComponent implements OnInit, OnDestroy {
     this.timeoutPercent.set(100);
   }
 
+  // --- UI EVENTS ---
   onUserInteraction() {
     this.showControls.set(true);
     this.resetControlTimer();
@@ -332,12 +362,15 @@ export class CameraWidgetComponent implements OnInit, OnDestroy {
   }
 
   onImageLoad(event: Event) {
-    const img = event.target as HTMLImageElement;
-    if (img.naturalWidth > 0) {
-        this.imgWidth.set(img.naturalWidth);
-        this.imgHeight.set(img.naturalHeight);
-        this.isLoading.set(false);
-    }
+    this.isLoading.set(false);
   }
-  onImageError(event: Event) { }
+
+  // [MỚI] Xử lý khi Stream bị lỗi (Broken pipe, server tắt)
+  onImageError(event: Event) {
+      if (this.isStreaming()) {
+          console.warn(`[Cam ${this.cameraId}] Stream Error (Broken Pipe).`);
+          // Không tắt hẳn để tránh nháy, nhưng có thể hiện lại loading hoặc retry
+          // Ở đây ta cứ để yên, nếu backend reconnect được thì ảnh sẽ tự load lại do thẻ img src không đổi
+      }
+  }
 }

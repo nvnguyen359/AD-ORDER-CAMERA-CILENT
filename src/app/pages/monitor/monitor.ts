@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, signal, inject } from '@angular/core';
+import { Component, OnInit, OnDestroy, signal, inject, NgZone, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Subscription } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
@@ -32,27 +32,32 @@ export class MonitorComponent implements OnInit, OnDestroy {
   private streamService = inject(StreamService);
   private storageService = inject(StorageService);
   private orderService = inject(OrderService);
+  private zone = inject(NgZone);
+  private cdr = inject(ChangeDetectorRef);
 
   // --- SIGNALS ---
   cameras = signal<any[]>([]);
   selectedCamera = signal<any>(null);
   isLoading = signal<boolean>(false);
   activePackingOrders = signal<any[]>([]);
+  isListLoading = signal<boolean>(false);
 
   private sub: Subscription | null = null;
+  private isTimerPending = false;
 
   ngOnInit() {
     const token = this.storageService.getItem(environment.ACCESS_TOKEN_KEY) || '';
 
-    // 1. Kết nối Socket
     this.streamService.connectSocket(token);
-
-    // 2. Load Cameras (Và sau đó sẽ load Active Orders)
     this.loadCameras();
 
-    // 3. Lắng nghe Socket
+    // Load lần đầu (có loading spinner)
+    this.loadInitialActiveOrders();
+
     this.sub = this.streamService.messages$.subscribe((msg: any) => {
-      this.handleSocketMessage(msg);
+      this.zone.run(() => {
+        this.handleSocketMessage(msg);
+      });
     });
   }
 
@@ -61,61 +66,82 @@ export class MonitorComponent implements OnInit, OnDestroy {
     this.streamService.disconnectSocket();
   }
 
+  // --- HÀM GIÚP ANGULAR NHẬN BIẾT ITEM NÀO THAY ĐỔI ---
+  // [QUAN TRỌNG] Giúp loại bỏ hiện tượng nháy hình
+  trackByOrder(index: number, item: any): number {
+    return item.order_id;
+  }
+
   loadCameras() {
     this.cameraService.getAllCameras().subscribe((res: any) => {
-      setTimeout(() => {
-        // [FIX AN TOÀN] Kiểm tra cấu trúc trả về của Camera API
-        // Nếu API trả về { data: [...] } hoặc { data: { items: [...] } }
-        let rawData = [];
-        if (Array.isArray(res.data)) {
-            rawData = res.data;
-        } else if (res.data && Array.isArray(res.data.items)) {
-            rawData = res.data.items;
-        } else {
-            rawData = res.data ? [res.data] : [];
-        }
+      let rawData = [];
+      if (Array.isArray(res.data)) rawData = res.data;
+      else if (res.data && Array.isArray(res.data.items)) rawData = res.data.items;
+      else rawData = res.data ? [res.data] : [];
 
-        const processedCameras = rawData.map((e: any) => {
-          e.display_name = e.display_name ? e.display_name : e.name;
-          return e;
-        });
+      const processedCameras = rawData.map((e: any) => {
+        e.display_name = e.display_name ? e.display_name : e.name;
+        return e;
+      });
 
-        this.cameras.set(processedCameras);
-
-        // Tự động chọn cam đầu tiên nếu chưa chọn
-        if (!this.selectedCamera() && processedCameras.length > 0) {
-          this.selectCamera(processedCameras[0]);
-        }
-
-        // Sau khi có danh sách Camera, load đơn đang chạy
-        this.loadInitialActiveOrders();
-      }, 0);
+      this.cameras.set(processedCameras);
+      if (!this.selectedCamera() && processedCameras.length > 0) {
+        this.selectCamera(processedCameras[0]);
+      }
     });
   }
 
-  // [FIX CHÍNH] Hàm này bị lỗi map is not a function
+  // Load có loading spinner (Dùng cho nút Refresh thủ công hoặc lần đầu)
   loadInitialActiveOrders() {
-    // 1. Đổi pageSize -> limit (cho khớp Python Backend)
-    this.orderService.getOrders({ status: 'packing', limit: 100 }).subscribe({
+    this.isListLoading.set(true);
+    this.fetchOrders(true);
+  }
+
+  // [FIX] Reload ngầm, không hiện spinner, có so sánh dữ liệu
+  reloadListSilent() {
+    this.fetchOrders(false);
+  }
+
+  // Hàm gọi API chung
+  private fetchOrders(showLoading: boolean) {
+    this.orderService.getOrders({
+        status: 'packing',
+        limit: 100,
+        sort_by: 'created_at',
+        sort_dir: 'desc'
+    }).subscribe({
       next: (res: any) => {
-        // 2. [FIX] Lấy dữ liệu từ .items
         const orders = res.data?.items || [];
 
-        if (orders.length > 0) {
-          const mappedOrders = orders.map((order: any) => ({
+        const mappedOrders = orders.map((order: any) => ({
             camera_id: order.camera_id,
-            // Tìm tên camera dựa vào ID
-            camera_name: this.cameras().find((c) => c.id === order.camera_id)?.name || `Cam ${order.camera_id}`,
+            camera_name: this.getCameraName(order.camera_id),
             code: order.code,
             order_id: order.id,
-            start_time: new Date(order.created_at),
+            start_time: order.created_at,
             avatar: this.resolveAvatar(order.path_avatar || order.full_avatar_path)
-          }));
+        }));
 
-          this.activePackingOrders.set(mappedOrders);
+        // [LOGIC UPDATE THÔNG MINH]
+        // Chuyển sang JSON string để so sánh nhanh xem có gì thay đổi không
+        // Nếu y hệt dữ liệu cũ -> KHÔNG set lại signal -> KHÔNG render lại -> KHÔNG nháy
+        const currentData = JSON.stringify(this.activePackingOrders());
+        const newData = JSON.stringify(mappedOrders);
+
+        if (currentData !== newData) {
+            console.log('⚡ Data changed -> Updating UI');
+            this.activePackingOrders.set(mappedOrders);
+            this.cdr.detectChanges();
+        } else {
+            // console.log('💤 Data same -> Skip update');
         }
+
+        if (showLoading) this.isListLoading.set(false);
       },
-      error: (err) => console.error('Không thể tải đơn hàng đang chạy:', err)
+      error: (err) => {
+        console.error('Lỗi tải đơn hàng:', err);
+        if (showLoading) this.isListLoading.set(false);
+      }
     });
   }
 
@@ -123,70 +149,48 @@ export class MonitorComponent implements OnInit, OnDestroy {
     const prevCam = this.selectedCamera();
     if (prevCam && prevCam.id === cam.id) return;
 
-    if (prevCam) {
-      this.streamService.toggleCamera(prevCam.id, 'disconnect').subscribe();
-    }
-
     this.selectedCamera.set(null);
     this.isLoading.set(true);
 
-    this.streamService.toggleCamera(cam.id, 'connect').subscribe({
-      next: () => {
+    setTimeout(() => {
         this.selectedCamera.set(cam);
         this.isLoading.set(false);
-      },
-      error: (err) => {
-        console.error('Lỗi bật camera:', err);
-        this.isLoading.set(false);
-      },
-    });
+    }, 50);
   }
 
   private handleSocketMessage(msg: any) {
     if (!msg || !msg.event) return;
 
-    if (msg.event === 'ORDER_CREATED') {
-      const data = msg.data || {};
-      const newOrder = {
-        camera_id: msg.camera_id,
-        camera_name: this.cameras().find((c) => c.id === msg.camera_id)?.name || `Cam ${msg.camera_id}`,
-        code: data.code,
-        order_id: data.order_id,
-        start_time: new Date(),
-        avatar: this.resolveAvatar(data.path_avatar || data.avatar),
-      };
-      this.activePackingOrders.update((list) => [newOrder, ...list]);
-
-    } else if (msg.event === 'ORDER_STOPPED') {
-      // Dùng data.order_id hoặc order_id trực tiếp tùy message
-      const stopId = msg.data?.order_id || msg.order_id;
-      this.activePackingOrders.update((list) =>
-        list.filter((item) => item.order_id !== stopId)
-      );
-
-    } else if (msg.event === 'ORDER_UPDATED') {
-      const data = msg.data || {};
-      const newAvatar = this.resolveAvatar(data.path_avatar || data.avatar);
-
-      this.activePackingOrders.update((list) =>
-        list.map((item) => {
-          if (item.order_id === data.order_id) {
-             return { ...item, avatar: newAvatar || item.avatar };
-          }
-          return item;
-        })
-      );
+    // 1. ORDER EVENTS -> Reload Ngầm
+    if (msg.event === 'ORDER_CREATED' || msg.event === 'ORDER_STOPPED' || msg.event === 'ORDER_UPDATED') {
+        // Gọi reload ngầm, không set loading spinner
+        this.reloadListSilent();
+        this.isTimerPending = false;
     }
+
+    // 2. QR_SCANNED (Backup) -> Reload Ngầm
+    else if (msg.event === 'QR_SCANNED') {
+        if (this.isTimerPending) return;
+        this.isTimerPending = true;
+
+        setTimeout(() => {
+            this.reloadListSilent();
+            this.isTimerPending = false;
+        }, 2000);
+    }
+  }
+
+  // --- HELPERS ---
+  private getCameraName(id: number): string {
+      const found = this.cameras().find(c => c.id == id);
+      return found ? (found.display_name || found.name) : `Cam ${id}`;
   }
 
   private resolveAvatar(path: string | null): string | null {
     if (!path) return null;
     if (path.startsWith('http')) return path;
-
     const cleanPath = path.startsWith('/') ? path.substring(1) : path;
-    // Đảm bảo không bị double slash
     const apiUrl = environment.apiUrl.endsWith('/') ? environment.apiUrl.slice(0, -1) : environment.apiUrl;
-
     return `${apiUrl}/${cleanPath}`;
   }
 }

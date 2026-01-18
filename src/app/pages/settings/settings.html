@@ -1,155 +1,92 @@
-<p-toast position="top-right" />
+<p-toast></p-toast>
 
-<div class="surface-section px-4 py-5 md:px-6 lg:px-8">
-    <div class="flex align-items-center justify-content-between mb-4">
-        <div>
-            <h2 class="text-3xl font-medium text-900 mb-2">Cài đặt hệ thống</h2>
-            <p class="text-600 mt-0 mb-0">OC System Configuration</p>
-        </div>
-        <p-button
-            label="Lưu cấu hình"
-            icon="pi pi-save"
-            [loading]="isLoading"
-            (onClick)="onSubmit()"
-            [disabled]="settingsForm.invalid">
-        </p-button>
+<div class="surface-section p-4 md:p-6 lg:p-8">
+  <div class="grid max-w-7xl mx-auto">
+
+    <div class="col-span-1">
+      <p-card header="⚙️ Camera & Hình ảnh" styleClass="h-full">
+        <form [formGroup]="settingForm" class="flex flex-col gap-4">
+
+          <div class="flex flex-col gap-1">
+            <label class="font-semibold text-gray-700">Độ phân giải (Resolution)</label>
+            <p-select
+              [options]="resolutions"
+              formControlName="resolution"
+              optionLabel="label"
+              optionValue="value"
+              placeholder="Chọn độ phân giải"
+              styleClass="w-full"
+              (onChange)="saveSettings()"> </p-select>
+            <small class="text-gray-500">Chọn tỉ lệ chuẩn (16:9 hoặc 4:3) để hình ảnh không bị méo.</small>
+          </div>
+
+          <div class="flex flex-col gap-1">
+            <label class="font-semibold text-gray-700">Thư mục lưu trữ</label>
+            <input
+              pInputText
+              formControlName="save_media"
+              placeholder="OC-media"
+              class="w-full"
+              (blur)="saveSettings()" /> <small class="text-gray-500">Tên thư mục gốc để lưu Video/Ảnh</small>
+          </div>
+
+        </form>
+      </p-card>
     </div>
 
-    <form [formGroup]="settingsForm">
-        <p-tabs value="0">
-            <p-tablist>
-                <p-tab value="0"><i class="pi pi-eye mr-2"></i>Camera & AI</p-tab>
-                <p-tab value="1"><i class="pi pi-cog mr-2"></i>Vận hành</p-tab>
-                <p-tab value="2"><i class="pi pi-database mr-2"></i>Lưu trữ</p-tab>
-            </p-tablist>
+    <div class="col-span-1">
+      <p-card header="🤖 Vận hành & AI" styleClass="h-full">
+        <form [formGroup]="settingForm" class="flex flex-col gap-4">
 
-            <p-tabpanels>
-                <p-tabpanel value="0">
-                    <div formGroupName="aiConfig" class="grid formgrid">
-                        <p-fluid class="col-12 md:col-6 pr-md-4">
-                            <p-card header="Nguồn hình ảnh">
-                                <div class="field mb-4">
-                                    <label class="block mb-2 font-medium">Chọn Camera</label>
-                                    <p-autocomplete
-                                        formControlName="selectedCameraObj"
-                                        [suggestions]="filteredCameras"
-                                        (completeMethod)="filterCameras($event)"
-                                        field="label"
-                                        [dropdown]="true"
-                                        placeholder="Chọn camera..."
-                                        [forceSelection]="true">
-                                    </p-autocomplete>
-                                </div>
-                                <div class="field mb-4 flex align-items-center justify-content-between p-3 surface-ground border-round">
-                                    <label class="font-medium">Debug Mode</label>
-                                    <p-toggleswitch formControlName="debugMode" />
-                                </div>
-                                <div class="field">
-                                    <label class="block mb-3 font-medium">Đối tượng</label>
-                                    <div class="flex gap-4">
-                                        <div class="flex align-items-center">
-                                            <p-checkbox formControlName="detectPerson" [binary]="true" inputId="p" />
-                                            <label for="p" class="ml-2">Con người</label>
-                                        </div>
-                                        <div class="flex align-items-center">
-                                            <p-checkbox formControlName="detectQR" [binary]="true" inputId="q" />
-                                            <label for="q" class="ml-2">Mã QR</label>
-                                        </div>
-                                    </div>
-                                </div>
-                            </p-card>
-                        </p-fluid>
-                        <div class="col-12 md:col-6 pl-md-4">
-                            <p-card header="Tham số AI">
-                                <div class="field mb-4">
-                                    <label class="block mb-2 font-medium">Độ nhạy: {{settingsForm.get('aiConfig.confidenceThreshold')?.value}}</label>
-                                    <p-slider formControlName="confidenceThreshold" [min]="0.1" [max]="1.0" [step]="0.05" />
-                                </div>
-                                <div class="field flex align-items-center justify-content-between mb-3">
-                                    <label class="font-medium">Vùng giám sát (ROI)</label>
-                                    <p-toggleswitch formControlName="enableROI" />
-                                </div>
-                                <div class="surface-0 p-4 border-2 border-dashed border-300 border-round text-center"
-                                     [ngClass]="{'opacity-50': !settingsForm.get('aiConfig.enableROI')?.value}">
-                                    <p-button label="Vẽ vùng ROI" icon="pi pi-pencil" [outlined]="true" (onClick)="mockDrawROI()" />
-                                </div>
-                            </p-card>
-                        </div>
-                    </div>
-                </p-tabpanel>
+          <div class="flex flex-col gap-1">
+            <label class="font-semibold text-gray-700">Thời gian tự ngắt (Timeout)</label>
+            <p-select
+              [options]="timeoutOptions"
+              formControlName="timeout_no_human"
+              optionLabel="label"
+              optionValue="value"
+              placeholder="Chọn thời gian chờ"
+              styleClass="w-full"
+              (onChange)="saveSettings()"> </p-select>
+            <small class="text-gray-500">Tự động đóng đơn nếu không thấy người sau khoảng thời gian này.</small>
+          </div>
 
-                <p-tabpanel value="1">
-                    <div class="grid formgrid">
-                        <div class="col-12 md:col-6 pr-md-4">
-                             <p-fluid formGroupName="operationConfig">
-                                <p-card header="Tự động hóa" styleClass="mb-3">
-                                    <div class="field">
-                                        <label class="block mb-2 font-medium">Idle Timeout (Giây)</label>
-                                        <p-inputnumber formControlName="idleTimeoutSeconds" [showButtons]="true" />
-                                    </div>
-                                </p-card>
-                            </p-fluid>
+          <div class="flex flex-col gap-1">
+            <label class="font-semibold text-gray-700">Giờ kết thúc ca (End Shift)</label>
+            <input
+              pInputText
+              type="time"
+              formControlName="work_end_time"
+              class="w-full"
+              (change)="saveSettings()" /> <small class="text-gray-500">Hệ thống sẽ tự động tắt và đóng đơn sau giờ này (Định dạng HH:MM).</small>
+          </div>
 
-                            <p-fluid formGroupName="times">
-                                <p-card header="Thời gian hoạt động">
-                                    <div class="field mb-3">
-                                        <label class="block mb-2 font-medium">Giờ mở cửa</label>
-                                        <input pInputText type="time" formControlName="open" class="w-full" />
-                                    </div>
-                                    <div class="field">
-                                        <label class="block mb-2 font-medium">Giờ đóng cửa</label>
-                                        <input pInputText type="time" formControlName="close" class="w-full" />
-                                    </div>
-                                </p-card>
-                            </p-fluid>
-                        </div>
+          <div class="flex flex-col gap-1 border-top-1 border-gray-200 pt-3 mt-2">
+            <label class="font-semibold text-gray-700">Độ nhạy AI (Confidence)</label>
+            <p-select
+              [options]="aiOptions"
+              formControlName="ai_confidence"
+              optionLabel="label"
+              optionValue="value"
+              placeholder="Chọn độ nhạy"
+              styleClass="w-full"
+              (onChange)="saveSettings()"> </p-select>
+            <small class="text-gray-500">Ngưỡng tin cậy để AI nhận diện. Thấp quá sẽ nhận nhầm, cao quá sẽ khó nhận.</small>
+          </div>
 
-                        <div class="col-12 md:col-6 pl-md-4" formGroupName="operationConfig">
-                            <p-card header="Ghi hình">
-                                <div class="flex flex-column gap-3">
-                                    <div class="flex justify-content-between p-2 surface-ground border-round">
-                                        <span>Ghi hình khi có QR</span>
-                                        <p-toggleswitch formControlName="autoRecordOnQR" />
-                                    </div>
-                                    <div class="flex justify-content-between p-2 surface-ground border-round">
-                                        <span>Chụp ảnh (Snapshot)</span>
-                                        <p-toggleswitch formControlName="autoSnapshot" />
-                                    </div>
-                                    <div class="flex justify-content-between p-2 surface-ground border-round">
-                                        <span>Âm thanh (Beep)</span>
-                                        <p-toggleswitch formControlName="soundAlerts" />
-                                    </div>
-                                </div>
-                            </p-card>
-                        </div>
-                    </div>
-                </p-tabpanel>
+        </form>
+      </p-card>
+    </div>
 
-                <p-tabpanel value="2">
-                    <div formGroupName="storageConfig" class="grid formgrid p-fluid">
-                        <div class="col-12">
-                            <p-card>
-                                <div class="field mb-4">
-                                    <label class="block mb-2 font-medium">Thư mục lưu Video</label>
-                                    <input pInputText type="text" formControlName="storagePath" class="w-full" placeholder="Ví dụ: D:/CCTV_Data" />
-                                </div>
-                                <div class="grid">
-                                    <div class="col-12 md:col-6 field">
-                                        <label class="block mb-2 font-medium">Lưu trữ (Ngày)</label>
-                                        <p-inputnumber formControlName="retentionDays" [showButtons]="true" />
-                                    </div>
-                                    <div class="col-12 md:col-6 flex align-items-end mb-3">
-                                        <div class="flex justify-content-between w-full p-2 surface-ground border-round">
-                                            <span>Tự xóa khi đầy</span>
-                                            <p-toggleswitch formControlName="autoCleanup" />
-                                        </div>
-                                    </div>
-                                </div>
-                            </p-card>
-                        </div>
-                    </div>
-                </p-tabpanel>
-            </p-tabpanels>
-        </p-tabs>
-    </form>
+  </div>
+
+  <div class="fixed-footer">
+    <p-button
+      label="Lưu Cấu Hình"
+      icon="pi pi-save"
+      (onClick)="saveSettings()"
+      [loading]="isLoading"
+      styleClass="p-button-primary px-6 p-button-rounded shadow-lg">
+    </p-button>
+  </div>
 </div>
