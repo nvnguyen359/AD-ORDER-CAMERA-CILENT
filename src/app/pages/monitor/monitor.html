@@ -4,8 +4,8 @@
     <app-activity-stats></app-activity-stats>
   </div>
 
-  <div class="main-area flex-1 flex flex-column relative min-w-0 min-h-0 bg-black-alpha-90">
-    <div class="camera-selector p-2 flex gap-2 overflow-x-auto border-bottom-1 border-gray-800 flex-shrink-0 bg-gray-900">
+  <div class="main-area flex-1 flex flex-column relative min-w-0 min-h-0 ">
+    <div class="camera-selector p-2 flex gap-2 overflow-x-auto border-bottom-1 border-gray-800 flex-shrink-0">
       <button *ngFor="let cam of cameras()"
               class="p-button p-component p-button-sm white-space-nowrap"
               [class.p-button-outlined]="selectedCamera()?.id !== cam.id"
@@ -25,6 +25,50 @@
         [autoConnect]="true"
         class="w-full h-full block">
       </app-camera-widget>
+    </div>
+  </div>
+
+  <div class="mobile-order-list block md:hidden h-18rem bg-gray-50 border-top-1 border-gray-300 flex flex-column shadow-2 z-2">
+    <div class="p-2 flex justify-content-between align-items-center bg-white border-bottom-1 border-gray-200 flex-shrink-0">
+        <div class="flex align-items-center gap-2">
+            <span class="font-bold text-gray-700 text-sm uppercase">🔴 Đang đóng gói</span>
+            <span class="bg-red-500 text-white text-xs px-2 py-1 border-round font-bold">{{ activePackingOrders().length }}</span>
+        </div>
+        <button pButton icon="pi pi-refresh"
+                class="p-button-rounded p-button-text p-button-sm p-button-secondary w-2rem h-2rem"
+                [loading]="isListLoading()"
+                (click)="loadInitialActiveOrders()"></button>
+    </div>
+
+    <div class="flex-1 overflow-y-auto p-2 custom-scroll">
+        <div *ngIf="activePackingOrders().length === 0" class="text-center py-4 text-gray-400">
+            <i class="pi pi-box text-3xl mb-2 opacity-50"></i>
+            <p class="m-0 text-xs">Chưa có đơn hàng nào</p>
+        </div>
+
+        <div *ngFor="let order of activePackingOrders(); trackBy: trackByOrder"
+             class="active-card surface-card p-2 mb-2 border-round shadow-1 border-1 border-transparent flex gap-3 align-items-center active:bg-blue-50"
+             (click)="selectCamera({id: order.camera_id, name: order.camera_name})">
+
+             <div class="w-3rem h-3rem border-round bg-gray-200 overflow-hidden relative flex-shrink-0 border-1 border-gray-300">
+                <img *ngIf="order.avatar" [src]="order.avatar" class="w-full h-full object-cover">
+                <div class="absolute inset-0 flex align-items-center justify-content-center text-gray-400" *ngIf="!order.avatar">
+                    <i class="pi pi-image"></i>
+                </div>
+            </div>
+
+            <div class="flex-1 min-w-0">
+                <div class="font-bold text-900 text-sm white-space-nowrap overflow-hidden text-overflow-ellipsis">
+                    {{ order.code }}
+                </div>
+                <div class="flex align-items-center justify-content-between mt-1">
+                    <span class="text-xs text-gray-500 flex align-items-center">
+                        <i class="pi pi-video mr-1 text-xs"></i> {{ order.camera_name }}
+                    </span>
+                    <span class="text-xs text-green-600 font-bold bg-green-100 px-2 border-round-sm">PACKING</span>
+                </div>
+            </div>
+        </div>
     </div>
   </div>
 
@@ -90,6 +134,7 @@
                 </div>
               </div>
             </div>
+
           </div>
 
         </div>

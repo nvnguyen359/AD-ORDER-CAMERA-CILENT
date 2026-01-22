@@ -1,4 +1,12 @@
-import { Component, OnInit, OnDestroy, signal, inject, NgZone, ChangeDetectorRef } from '@angular/core';
+import {
+  Component,
+  OnInit,
+  OnDestroy,
+  signal,
+  inject,
+  NgZone,
+  ChangeDetectorRef,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Subscription } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
@@ -39,7 +47,7 @@ export class MonitorComponent implements OnInit, OnDestroy {
   cameras = signal<any[]>([]);
   selectedCamera = signal<any>(null);
   isLoading = signal<boolean>(false);
-  activePackingOrders = signal<any[]>([]);
+  activePackingOrders = signal<any[]>([]); // Danh sách realtime
   isListLoading = signal<boolean>(false);
 
   private sub: Subscription | null = null;
@@ -51,7 +59,7 @@ export class MonitorComponent implements OnInit, OnDestroy {
     this.streamService.connectSocket(token);
     this.loadCameras();
 
-    // Load lần đầu (có loading spinner)
+    // Load lần đầu tiên khi vào trang
     this.loadInitialActiveOrders();
 
     this.sub = this.streamService.messages$.subscribe((msg: any) => {
@@ -66,8 +74,6 @@ export class MonitorComponent implements OnInit, OnDestroy {
     this.streamService.disconnectSocket();
   }
 
-  // --- HÀM GIÚP ANGULAR NHẬN BIẾT ITEM NÀO THAY ĐỔI ---
-  // [QUAN TRỌNG] Giúp loại bỏ hiện tượng nháy hình
   trackByOrder(index: number, item: any): number {
     return item.order_id;
   }
@@ -91,58 +97,50 @@ export class MonitorComponent implements OnInit, OnDestroy {
     });
   }
 
-  // Load có loading spinner (Dùng cho nút Refresh thủ công hoặc lần đầu)
   loadInitialActiveOrders() {
     this.isListLoading.set(true);
     this.fetchOrders(true);
   }
 
-  // [FIX] Reload ngầm, không hiện spinner, có so sánh dữ liệu
+  // Vẫn giữ hàm này để đồng bộ dữ liệu nếu cần thiết (backup)
   reloadListSilent() {
     this.fetchOrders(false);
   }
 
-  // Hàm gọi API chung
   private fetchOrders(showLoading: boolean) {
-    this.orderService.getOrders({
+    this.orderService
+      .getOrders({
         status: 'packing',
         limit: 100,
         sort_by: 'created_at',
-        sort_dir: 'desc'
-    }).subscribe({
-      next: (res: any) => {
-        const orders = res.data?.items || [];
-
-        const mappedOrders = orders.map((order: any) => ({
+        sort_dir: 'desc',
+      })
+      .subscribe({
+        next: (res: any) => {
+          const orders = res.data?.items || [];
+          const mappedOrders = orders.map((order: any) => ({
             camera_id: order.camera_id,
             camera_name: this.getCameraName(order.camera_id),
             code: order.code,
             order_id: order.id,
             start_time: order.created_at,
-            avatar: this.resolveAvatar(order.path_avatar || order.full_avatar_path)
-        }));
+            avatar: this.resolveAvatar(order.path_avatar || order.full_avatar_path),
+          }));
 
-        // [LOGIC UPDATE THÔNG MINH]
-        // Chuyển sang JSON string để so sánh nhanh xem có gì thay đổi không
-        // Nếu y hệt dữ liệu cũ -> KHÔNG set lại signal -> KHÔNG render lại -> KHÔNG nháy
-        const currentData = JSON.stringify(this.activePackingOrders());
-        const newData = JSON.stringify(mappedOrders);
+          const currentData = JSON.stringify(this.activePackingOrders());
+          const newData = JSON.stringify(mappedOrders);
 
-        if (currentData !== newData) {
-            console.log('⚡ Data changed -> Updating UI');
+          if (currentData !== newData) {
             this.activePackingOrders.set(mappedOrders);
             this.cdr.detectChanges();
-        } else {
-            // console.log('💤 Data same -> Skip update');
-        }
-
-        if (showLoading) this.isListLoading.set(false);
-      },
-      error: (err) => {
-        console.error('Lỗi tải đơn hàng:', err);
-        if (showLoading) this.isListLoading.set(false);
-      }
-    });
+          }
+          if (showLoading) this.isListLoading.set(false);
+        },
+        error: (err) => {
+          console.error('Lỗi tải đơn hàng:', err);
+          if (showLoading) this.isListLoading.set(false);
+        },
+      });
   }
 
   selectCamera(cam: any) {
@@ -153,44 +151,89 @@ export class MonitorComponent implements OnInit, OnDestroy {
     this.isLoading.set(true);
 
     setTimeout(() => {
-        this.selectedCamera.set(cam);
-        this.isLoading.set(false);
+      this.selectedCamera.set(cam);
+      this.isLoading.set(false);
     }, 50);
   }
 
+  // --- XỬ LÝ SOCKET REALTIME (LOGIC MỚI) ---
   private handleSocketMessage(msg: any) {
     if (!msg || !msg.event) return;
 
-    // 1. ORDER EVENTS -> Reload Ngầm
-    if (msg.event === 'ORDER_CREATED' || msg.event === 'ORDER_STOPPED' || msg.event === 'ORDER_UPDATED') {
-        // Gọi reload ngầm, không set loading spinner
-        this.reloadListSilent();
-        this.isTimerPending = false;
+    // Backend gửi cấu trúc: { event: "...", payload: { ... } }
+    const payload = msg.payload || msg.data || {};
+
+    // 1. CÓ ĐƠN HÀNG MỚI -> THÊM VÀO ĐẦU LIST
+    if (msg.event === 'ORDER_CREATED') {
+      const newOrder = {
+        camera_id: payload.cam_id,
+        camera_name: this.getCameraName(payload.cam_id),
+        code: payload.code,
+        order_id: payload.order_id,
+        start_time: new Date(payload.start_time).toISOString(), // Backend gửi timestamp ms
+        avatar: null // Mới tạo chưa có ảnh
+      };
+
+      // Cập nhật Signal: Thêm vào đầu mảng
+      this.activePackingOrders.update(current => {
+        // Kiểm tra trùng lặp (đề phòng mạng lag socket bắn 2 lần)
+        if (current.some(o => o.code === newOrder.code)) return current;
+        return [newOrder, ...current];
+      });
+
+      console.log(`🚀 [Socket] New Order: ${newOrder.code}`);
     }
 
-    // 2. QR_SCANNED (Backup) -> Reload Ngầm
-    else if (msg.event === 'QR_SCANNED') {
-        if (this.isTimerPending) return;
-        this.isTimerPending = true;
+    // 2. ĐƠN HÀNG KẾT THÚC -> XÓA KHỎI LIST
+    else if (msg.event === 'ORDER_STOPPED') {
+      const codeToRemove = payload.code;
+      if (codeToRemove) {
+        this.activePackingOrders.update(current =>
+          current.filter(o => o.code !== codeToRemove)
+        );
+        console.log(`🛑 [Socket] Removed Order: ${codeToRemove}`);
+      } else {
+        // Fallback: Nếu không có code, reload lại cho chắc
+        this.reloadListSilent();
+      }
+    }
 
-        setTimeout(() => {
-            this.reloadListSilent();
-            this.isTimerPending = false;
-        }, 2000);
+    // 3. CẬP NHẬT ẢNH (SNAPSHOT) -> UPDATE LIST
+    else if (msg.event === 'ORDER_UPDATED') {
+      const orderId = payload.order_id;
+      const newAvatarPath = payload.path_avatar;
+
+      if (orderId && newAvatarPath) {
+        this.activePackingOrders.update(current =>
+          current.map(o => {
+            if (o.order_id === orderId) {
+              return { ...o, avatar: this.resolveAvatar(newAvatarPath) };
+            }
+            return o;
+          })
+        );
+      }
+    }
+
+    // 4. Fallback cho các sự kiện khác (QR_SCANNED...)
+    else if (msg.event === 'QR_SCANNED') {
+       // Logic cũ nếu cần
     }
   }
 
   // --- HELPERS ---
   private getCameraName(id: number): string {
-      const found = this.cameras().find(c => c.id == id);
-      return found ? (found.display_name || found.name) : `Cam ${id}`;
+    const found = this.cameras().find((c) => c.id == id);
+    return found ? found.display_name || found.name : `Cam ${id}`;
   }
 
   private resolveAvatar(path: string | null): string | null {
     if (!path) return null;
     if (path.startsWith('http')) return path;
     const cleanPath = path.startsWith('/') ? path.substring(1) : path;
-    const apiUrl = environment.apiUrl.endsWith('/') ? environment.apiUrl.slice(0, -1) : environment.apiUrl;
+    const apiUrl = environment.apiUrl.endsWith('/')
+      ? environment.apiUrl.slice(0, -1)
+      : environment.apiUrl;
     return `${apiUrl}/${cleanPath}`;
   }
 }

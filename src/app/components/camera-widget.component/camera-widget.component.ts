@@ -120,20 +120,20 @@ export class CameraWidgetComponent implements OnInit, OnDestroy {
     });
   });
 
-  // Icon nút quay
+  // [FIX] Cập nhật Icon: AUTO cũng hiện nút Stop
   recordBtnIcon = computed(() => {
     switch (this.recordingState()) {
-      case 'MANUAL': return 'pi pi-stop-circle'; // Đang quay tay -> Nút Stop
-      case 'AUTO': return 'pi pi-lock';         // Đang tự động -> Khóa (ko cho tắt tay)
-      default: return 'pi pi-video';            // Nghỉ -> Nút Quay
+      case 'MANUAL': return 'pi pi-stop-circle';
+      case 'AUTO': return 'pi pi-stop-circle'; // Cho phép Stop khi đang Auto
+      default: return 'pi pi-video';
     }
   });
 
-  // Tooltip nút quay
+  // [FIX] Cập nhật Tooltip
   recordBtnTooltip = computed(() => {
     switch (this.recordingState()) {
       case 'MANUAL': return 'Dừng & Lưu';
-      case 'AUTO': return 'Đang quay tự động theo đơn';
+      case 'AUTO': return 'Bắt buộc dừng (Force Stop)';
       default: return 'Ghi hình thủ công';
     }
   });
@@ -293,26 +293,35 @@ export class CameraWidgetComponent implements OnInit, OnDestroy {
   toggleRecording(event?: Event) {
     event?.stopPropagation();
     const currentState = this.recordingState();
-    if (currentState === 'AUTO') return;
 
-    if (currentState === 'MANUAL') {
-      const payload = { order_code: `MANUAL-${Date.now()}`, client_id: 1, note: 'User Stopped' };
+    // [FIX] Đã BỎ dòng: if (currentState === 'AUTO') return;
+
+    // Nếu đang quay (bao gồm cả MANUAL và AUTO) -> Thực hiện STOP
+    if (currentState === 'MANUAL' || currentState === 'AUTO') {
       this.orderCode.set('Đang lưu...');
-      this.streamService.stopRecording(this.cameraId, payload).subscribe({
+
+      // [FIX] Bỏ payload, chỉ truyền cameraId
+      this.streamService.stopRecording(this.cameraId).subscribe({
         next: () => {
           this.recordingState.set('IDLE');
           this.orderCode.set('Đã lưu');
           setTimeout(() => this.orderCode.set(null), 3000);
-          this.messageService.add({ severity: 'success', summary: 'OK', detail: 'Đã lưu video thủ công.' });
+          this.messageService.add({ severity: 'success', summary: 'OK', detail: 'Đã dừng ghi hình.' });
         },
-        error: () => this.orderCode.set('Lỗi lưu')
+        error: () => {
+          this.orderCode.set('Lỗi lưu');
+          this.messageService.add({ severity: 'error', summary: 'Lỗi', detail: 'Không thể dừng video.' });
+        }
       });
     } else {
-      this.streamService.startRecording(this.cameraId).subscribe({
+      // --- START RECORDING ---
+      const manualCode = `MANUAL_${Date.now()}`;
+
+      this.streamService.startRecording(this.cameraId, manualCode).subscribe({
         next: () => {
           this.recordingState.set('MANUAL');
           this.orderCode.set('Thủ Công');
-          this.messageService.add({ severity: 'success', summary: 'Start', detail: 'Bắt đầu ghi hình.' });
+          this.messageService.add({ severity: 'success', summary: 'Start', detail: 'Bắt đầu ghi hình thủ công.' });
         },
         error: () => this.messageService.add({ severity: 'error', summary: 'Lỗi', detail: 'Không thể bắt đầu.' })
       });

@@ -4,13 +4,12 @@
   position: relative;
   width: 100%;
   height: auto;
-  border-radius: 12px;
+  border-radius: 6px;
   overflow: hidden;
-  background: #000;
+  background: #fff; /* [EDIT] Chuyển nền sang trắng cho Footer đẹp hơn */
   box-shadow: 0 10px 30px rgba(0,0,0,0.3);
   transition: box-shadow 0.3s ease;
 
-  /* Status Borders (Glowing) */
   &.status-idle { box-shadow: 0 4px 20px rgba(0,0,0,0.2); }
   &.status-recording { box-shadow: 0 0 0 2px #2ecc71, 0 0 20px rgba(46, 204, 113, 0.4); }
   &.status-warning { box-shadow: 0 0 0 2px #e74c3c, 0 0 20px rgba(231, 76, 60, 0.4); }
@@ -23,7 +22,7 @@
   display: flex; justify-content: space-between; align-items: center;
   background: linear-gradient(to bottom, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0) 100%);
   z-index: 20;
-  pointer-events: none; /* Để click xuyên qua video */
+  pointer-events: none;
 
   .status-dot {
     width: 8px; height: 8px; border-radius: 50%; background: #666;
@@ -31,20 +30,13 @@
   }
   .camera-name { color: #fff; font-weight: 600; text-shadow: 0 1px 2px rgba(0,0,0,0.5); font-size: 0.95rem; }
   .res-badge { background: rgba(255,255,255,0.2); color: #ddd; font-size: 0.7rem; padding: 2px 6px; border-radius: 4px; }
-
-  .recording-badge {
-    background: rgba(231, 76, 60, 0.9); color: white;
-    padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: bold;
-    display: flex; align-items: center; gap: 6px;
-    &.pulse { animation: pulse-opacity 1.5s infinite; }
-  }
 }
 
 /* --- VIEWPORT --- */
 .viewport {
   width: 100%;
-  height: auto; /* Tự co giãn theo aspect-ratio */
-  background: #000;
+  height: auto;
+  background: #000; /* Video vẫn nền đen */
   position: relative;
   overflow: hidden;
   display: flex; align-items: center; justify-content: center;
@@ -65,10 +57,9 @@
 }
 
 /* --- OVERLAYS --- */
-.overlay-layer {
+.loading-layer {
   position: absolute; inset: 0; background: #111; z-index: 10;
   display: flex; flex-direction: column; align-items: center; justify-content: center; color: #888;
-  &.offline { background: #1a1a1a; }
 }
 
 .play-overlay {
@@ -79,55 +70,29 @@
   pointer-events: none;
   &.visible { opacity: 1; pointer-events: auto; }
 
-  .btn-play-big {
+  .play-btn {
     width: 64px; height: 64px; border-radius: 50%;
     background: rgba(255,255,255,0.15); backdrop-filter: blur(4px);
     border: 1px solid rgba(255,255,255,0.3);
     color: white; font-size: 1.5rem; cursor: pointer;
-    transition: all 0.2s;
-    &:hover { transform: scale(1.1); background: rgba(255,255,255,0.3); }
-  }
-}
-
-/* --- CONTROLS BAR (Bottom) --- */
-.controls-bar {
-  position: absolute; bottom: 16px; left: 16px; right: 16px;
-  height: 48px;
-  background: rgba(20, 20, 20, 0.7); backdrop-filter: blur(10px);
-  border-radius: 24px;
-  border: 1px solid rgba(255,255,255,0.1);
-  display: flex; justify-content: space-between; align-items: center;
-  padding: 0 8px;
-  z-index: 25;
-  transform: translateY(10px); opacity: 0; transition: all 0.3s;
-
-  &.visible { transform: translateY(0); opacity: 1; }
-
-  .control-group { display: flex; gap: 8px; }
-
-  .control-info {
-    color: #fff; font-size: 0.9rem; font-weight: 500;
-    text-shadow: 0 0 10px rgba(46, 204, 113, 0.5);
-  }
-
-  .btn-icon {
-    width: 36px; height: 36px; border-radius: 50%; border: none;
-    background: transparent; color: #ccc; cursor: pointer;
     display: flex; align-items: center; justify-content: center;
     transition: all 0.2s;
-    &:hover { background: rgba(255,255,255,0.1); color: white; }
-    &.active { color: #e74c3c; background: rgba(231, 76, 60, 0.1); }
+    &:hover { transform: scale(1.1); background: rgba(255,255,255,0.3); }
   }
 }
 
 /* Animations */
 @keyframes pulse-opacity { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
 
-/* PrimeNG Overrides */
+/* [EDIT] Style cho Dropdown PrimeNG (cho nền trắng) */
 :host ::ng-deep {
-  .glass-select {
-    background: transparent !important; border: none !important; box-shadow: none !important;
-    .p-select-label { color: #fff !important; padding: 0.5rem; }
-    .p-select-dropdown { color: #fff !important; }
+  .p-select {
+    border: none; background: transparent;
+    .p-select-label { padding: 0.5rem; color: #374151; font-weight: 500; }
+    .p-select-dropdown { color: #6b7280; }
+    &:hover { background: #f3f4f6; border-radius: 6px; }
   }
+}
+.footer{
+  background-color: #c7c7c748;
 }

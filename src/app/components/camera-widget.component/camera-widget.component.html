@@ -6,19 +6,6 @@
     'status-warning': isTimeoutWarning()
   }">
 
-  <div class="header flex justify-content-between align-items-center">
-    <div class="flex align-items-center gap-3 overflow-hidden">
-      <i class="pi pi-camera text-xl text-primary-400"></i>
-      <div class="flex flex-column">
-        <span class="font-bold text-base white-space-nowrap">{{ cameraName }}</span>
-        <span class="text-xs text-gray-400" *ngIf="isStreaming()">{{ imgWidth() }}x{{ imgHeight() }}</span>
-      </div>
-      <span class="px-2 py-1 border-round-md text-xs font-bold uppercase tracking-wide"
-        [class.bg-green-500]="isStreaming()" [class.bg-red-500]="!isStreaming()">
-        {{ isStreaming() ? 'LIVE' : 'OFFLINE' }}
-      </span>
-    </div>
-  </div>
 
   <div #viewport class="viewport group select-none"
     [style.aspect-ratio]="isFullscreen() ? 'unset' : aspectRatio()"
@@ -34,7 +21,7 @@
     </div>
 
     <div *ngIf="!isStreaming() && !isLoading()"
-      class="absolute inset-0 flex flex-column justify-content-center align-items-center bg-gray-900 z-1">
+      class="absolute inset-0 flex flex-column justify-content-center align-items-center z-1">
       <i class="pi pi-video-slash text-6xl text-gray-700 mb-3"></i>
       <span class="text-gray-600 font-medium">Mất tín hiệu</span>
     </div>
@@ -61,27 +48,33 @@
     </ng-container>
   </div>
 
-  <div class="footer flex justify-content-between align-items-center" (click)="$event.stopPropagation()">
+  <div class="footer flex justify-content-between align-items-center px-3 py-2" (click)="$event.stopPropagation()">
     <div class="mode-selector">
       <p-select [options]="viewOptions" [ngModel]="viewMode()" (onChange)="viewMode.set($event.value)"
-        optionLabel="label" optionValue="value" [disabled]="!isStreaming()" appendTo="body" styleClass="custom-select"
-        panelStyleClass="custom-select-panel">
+        optionLabel="label" optionValue="value" [disabled]="!isStreaming()" appendTo="body">
         <ng-template pTemplate="selectedItem" let-selected>
-           <div class="flex align-items-center gap-2" *ngIf="selected"><i [class]="selected.icon"></i><span class="font-medium text-sm">{{ selected.label }}</span></div>
+           <div class="flex align-items-center gap-2" *ngIf="selected">
+             <i [class]="selected.icon" class="text-gray-600"></i>
+             <span class="font-medium text-sm text-gray-700">{{ selected.label }}</span>
+           </div>
         </ng-template>
         <ng-template pTemplate="item" let-option>
-           <div class="flex align-items-center gap-2"><i [class]="option.icon"></i><span class="text-sm">{{ option.label }}</span></div>
+           <div class="flex align-items-center gap-2">
+             <i [class]="option.icon"></i>
+             <span class="text-sm">{{ option.label }}</span>
+           </div>
         </ng-template>
       </p-select>
     </div>
 
     <div class="flex gap-2">
-      <button class="p-button p-button-rounded p-button-text text-gray-300 hover:text-white hover:bg-gray-800"
+      <button class="p-button p-button-rounded p-button-text text-gray-600 hover:text-primary hover:bg-gray-100"
         [class.text-red-500]="isRecording()"
         [disabled]="!isStreaming()" [pTooltip]="recordBtnTooltip()" (click)="toggleRecording($event)">
         <i [class]="recordBtnIcon()" class="text-xl"></i>
       </button>
-      <button class="p-button p-button-rounded p-button-text text-gray-300 hover:text-white hover:bg-gray-800"
+
+      <button class="p-button p-button-rounded p-button-text text-gray-600 hover:text-primary hover:bg-gray-100"
         [disabled]="!isStreaming()" (click)="toggleFullscreen($event)" pTooltip="Toàn màn hình">
         <i [class]="isFullscreen() ? 'pi pi-compress' : 'pi pi-expand'" class="text-xl"></i>
       </button>
