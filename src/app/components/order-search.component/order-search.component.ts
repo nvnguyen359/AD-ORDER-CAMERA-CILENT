@@ -71,6 +71,7 @@ export class OrderSearchComponent {
   @Output() filterChange = new EventEmitter<FilterState>();
   @Output() openQrScanner = new EventEmitter<void>();
   isShowFilter = input<boolean>(true);
+
   // --- SIGNALS & STATE ---
   suggestions = signal<Order[]>([]);
   activePreset = signal<string>('today');
@@ -136,9 +137,6 @@ export class OrderSearchComponent {
     // Nếu không có từ khóa hoặc từ khóa rỗng, trả về text gốc (đã sanitize nhẹ)
     if (!query) return text;
 
-    // Tìm kiếm tương đối (không cần regex quá phức tạp vì ta đã filter rồi)
-    // Tuy nhiên để highlight đúng ký tự gốc (có dấu) dựa trên input (không dấu) là rất khó
-    // Ở đây ta dùng cách đơn giản: Highlight chuỗi khớp Case-Insensitive
     const pattern = new RegExp(`(${query})`, 'gi');
     const highlighted = text.replace(pattern, '<span class="highlight-match">$1</span>');
 
@@ -158,8 +156,16 @@ export class OrderSearchComponent {
         code: query,
       })
       .subscribe({
-        next: (res) => {
-          const rawData = res.data || [];
+        next: (res: any) => { // [FIX] Ép kiểu res thành any để tránh lỗi TS strict
+          // [FIX] Xử lý cấu trúc dữ liệu mới: { items: [...] } hoặc mảng cũ [...]
+          const responseData: any = res.data || {}; // [FIX] Ép kiểu any cho biến trung gian
+          let rawData: Order[] = [];
+
+          if (Array.isArray(responseData)) {
+            rawData = responseData;
+          } else if (responseData.items && Array.isArray(responseData.items)) {
+            rawData = responseData.items;
+          }
 
           // B1: Lọc trùng mã (Deduplicate)
           let uniqueOrders = Array.from(new Map(rawData.map((item) => [item.code, item])).values());
@@ -253,7 +259,7 @@ export class OrderSearchComponent {
 
   private emitWithOverride(override: Partial<FilterState>) {
     const preset = this.activePreset();
-    let dateParams: any = { datePreset: preset };
+    let dateParams: any = { date_preset: preset };
     if (preset === 'custom' && this.rangeDates) {
       dateParams = {
         date_preset: undefined,
@@ -263,6 +269,7 @@ export class OrderSearchComponent {
     }
     this.filterChange.emit({ ...dateParams, ...override });
   }
+
   // Hàm xử lý khi quét thành công
   onQrScanSuccess(code: string) {
     console.log('Quét thành công:', code);

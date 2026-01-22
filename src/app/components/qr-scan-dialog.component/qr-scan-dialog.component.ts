@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Output, signal, model, effect } from '@angular/core';
+import { Component, EventEmitter, Output, signal, model, effect, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 
@@ -9,6 +9,7 @@ import { BarcodeFormat } from '@zxing/library';
 // PrimeNG Imports
 import { DialogModule } from 'primeng/dialog';
 import { ButtonModule } from 'primeng/button';
+import { MessageService } from 'primeng/api';
 
 @Component({
   selector: 'app-qr-scan-dialog',
@@ -24,8 +25,11 @@ import { ButtonModule } from 'primeng/button';
   styleUrls: ['./qr-scan-dialog.component.scss']
 })
 export class QrScanDialogComponent {
+  // Input Model (Signal) từ Angular 17+
   visible = model<boolean>(false);
   @Output() scanSuccess = new EventEmitter<string>();
+
+  private messageService = inject(MessageService);
 
   allowedFormats = [
     BarcodeFormat.QR_CODE, BarcodeFormat.CODE_128, BarcodeFormat.CODE_39,
@@ -37,11 +41,14 @@ export class QrScanDialogComponent {
   hasDevices = signal<boolean>(false);
   availableDevices = signal<MediaDeviceInfo[]>([]);
   currentDevice = signal<MediaDeviceInfo | undefined>(undefined);
-  isScanning = signal<boolean>(true);
+  isScanning = signal<boolean>(true); // Trạng thái để debounce
+
+  // Debounce: Thời gian chờ giữa 2 lần quét (ms)
+  private readonly SCAN_DEBOUNCE_MS = 2000;
+  private lastScanTime = 0;
 
   // Biến check môi trường an toàn
   isSecureContext = window.isSecureContext;
-$index: any;
 
   constructor() {
     effect(() => {
@@ -62,6 +69,7 @@ $index: any;
     this.hasDevices.set(false);
     this.isScanning.set(true);
     this.availableDevices.set([]);
+    this.lastScanTime = 0; // Reset debounce time
   }
 
   // [FIX] Hàm xin quyền thủ công (Native API)
@@ -86,6 +94,7 @@ $index: any;
     } catch (err) {
         console.error('Xin quyền thất bại:', err);
         this.permissionState.set(false);
+        this.messageService.add({severity: 'error', summary: 'Lỗi Quyền', detail: 'Vui lòng cấp quyền Camera'});
     }
   }
 
@@ -97,10 +106,6 @@ $index: any;
 
     if (!videoDevices || videoDevices.length === 0) {
         this.hasDevices.set(false);
-        // Nếu danh sách rỗng, có thể do chưa cấp quyền -> Gọi xin quyền
-        if (this.permissionState() !== false) {
-             // Không gọi đệ quy ngay lập tức để tránh loop, user sẽ bấm nút "Thử lại"
-        }
         return;
     }
 
@@ -120,8 +125,6 @@ $index: any;
   }
 
   onDeviceSelectChange(device: any) {
-      // Vì dùng thẻ select native, event trả về là string (nếu dùng ngValue thì trả về object)
-      // Angular ngModel change event với select trả về value trực tiếp
       console.log('User switched to:', device.label);
       this.currentDevice.set(device);
   }
@@ -133,11 +136,27 @@ $index: any;
   }
 
   onScanSuccess(resultString: string): void {
-    if (!this.isScanning() || !resultString) return;
+    if (!resultString) return;
 
+    const now = Date.now();
+    // Chặn nếu quét quá nhanh (Debounce)
+    if (now - this.lastScanTime < this.SCAN_DEBOUNCE_MS) {
+        return;
+    }
+    this.lastScanTime = now;
+
+    console.log('📷 QR Scanned:', resultString);
+
+    // Phát tiếng bíp
     this.playBeep();
+
+    // Tắt scan tạm thời
     this.isScanning.set(false);
+
+    // Gửi kết quả
     this.scanSuccess.emit(resultString);
+
+    // Đóng dialog sau 0.3s
     setTimeout(() => this.closeDialog(), 300);
   }
 

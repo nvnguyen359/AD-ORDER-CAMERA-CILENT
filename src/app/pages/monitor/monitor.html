@@ -47,10 +47,10 @@
         </div>
 
         <div *ngFor="let order of activePackingOrders(); trackBy: trackByOrder"
-             class="active-card surface-card p-2 mb-2 border-round shadow-1 border-1 border-transparent flex gap-3 align-items-center active:bg-blue-50"
+             class="active-card surface-card p-2 mb-2 border-round shadow-1 border-1 border-transparent flex gap-3 align-items-start active:bg-blue-50"
              (click)="selectCamera({id: order.camera_id, name: order.camera_name})">
 
-             <div class="w-3rem h-3rem border-round bg-gray-200 overflow-hidden relative flex-shrink-0 border-1 border-gray-300">
+             <div class="w-3rem h-3rem border-round bg-gray-200 overflow-hidden relative flex-shrink-0 border-1 border-gray-300 mt-1">
                 <img *ngIf="order.avatar" [src]="order.avatar" class="w-full h-full object-cover">
                 <div class="absolute inset-0 flex align-items-center justify-content-center text-gray-400" *ngIf="!order.avatar">
                     <i class="pi pi-image"></i>
@@ -61,11 +61,19 @@
                 <div class="font-bold text-900 text-sm white-space-nowrap overflow-hidden text-overflow-ellipsis">
                     {{ order.code }}
                 </div>
-                <div class="flex align-items-center justify-content-between mt-1">
+
+                <div class="flex align-items-center gap-2 mt-1">
                     <span class="text-xs text-gray-500 flex align-items-center">
                         <i class="pi pi-video mr-1 text-xs"></i> {{ order.camera_name }}
                     </span>
-                    <span class="text-xs text-green-600 font-bold bg-green-100 px-2 border-round-sm">PACKING</span>
+                    <span class="text-xs text-blue-600 flex align-items-center" *ngIf="order.start_time">
+                        <i class="pi pi-clock mr-1 text-xs"></i>
+                        {{ order.start_time | appTimeFormat }}
+                    </span>
+                </div>
+
+                <div *ngIf="order.note" class="text-xs text-orange-600 mt-1 white-space-nowrap overflow-hidden text-overflow-ellipsis">
+                    <i class="pi pi-tag mr-1 text-xs"></i> {{ order.note }}
                 </div>
             </div>
         </div>
@@ -129,8 +137,17 @@
                      [title]="order.code">
                   {{ order.code }}
                 </div>
-                <div class="text-xs text-gray-500">
-                   ID: #{{ order.order_id }}
+
+                <div class="flex flex-wrap gap-2 align-items-center">
+                    <span class="text-xs text-gray-500">ID: #{{ order.order_id }}</span>
+                    <span class="text-xs text-blue-600 flex align-items-center" *ngIf="order.start_time">
+                        <i class="pi pi-clock mr-1 text-xs"></i>
+                        {{ order.start_time | appTimeFormat }}
+                    </span>
+                </div>
+
+                <div *ngIf="order.note" class="text-xs text-orange-600 mt-1 white-space-nowrap overflow-hidden text-overflow-ellipsis" [title]="order.note">
+                    <i class="pi pi-tag mr-1 text-xs"></i> {{ order.note }}
                 </div>
               </div>
             </div>

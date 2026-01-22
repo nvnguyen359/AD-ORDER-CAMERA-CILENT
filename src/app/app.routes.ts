@@ -1,9 +1,9 @@
 import { Routes } from '@angular/router';
-import { SettingsComponent } from './pages/settings/settings';
 import { authGuard } from './core/guards/auth.guard';
 import { AuthComponent } from './components/auth-component/auth-component';
 import { OrderDetailComponent } from './components/order-detail.component/order-detail.component';
-import { CamerasComponent } from './components/cameras.component/cameras.component';
+import {  CamerasPage } from './pages/cameras/cameras';
+
 
 export const routes: Routes = [
 
@@ -35,8 +35,8 @@ export const routes: Routes = [
     path: 'order-detail/:code', // :code là tham số động
     component: OrderDetailComponent
   },{
-    path:'camera',
-    component: CamerasComponent,
+    path:'cameras',
+    component: CamerasPage,
     canActivate: [authGuard]
   }
 ];

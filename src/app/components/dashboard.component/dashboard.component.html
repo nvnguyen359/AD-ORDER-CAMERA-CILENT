@@ -161,7 +161,7 @@
                 </ng-template>
 
                 <ng-template pTemplate="body" let-order>
-                    <tr [ngClass]="{'bg-red-50': order.parent_id || (order.note && order.note.includes('Auto Timeout'))}">
+                   <tr [ngClass]="{'bg-red-50': order.parent_id || (order.note && order.note.includes('Timeout'))}">
 
                         <td class="text-center p-1">
                             <div class="flex justify-content-center">

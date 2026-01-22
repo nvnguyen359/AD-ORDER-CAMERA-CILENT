@@ -39,7 +39,7 @@ import { OrderStatusPipe } from '../../shared/pipes/order-status-pipe';
     InputTextModule,
     ImageModule,
     DatePickerModule,
-    OrderDetailComponent,OrderStatusPipe
+    OrderDetailComponent, OrderStatusPipe
   ],
   templateUrl: './dashboard.component.html',
   styleUrls: ['./dashboard.component.scss'],
@@ -92,110 +92,98 @@ export class DashboardComponent implements OnInit {
     this.isFilterMenuOpen = false;
   }
 
-  // --- [QUAN TRỌNG] LOAD DATA ĐÃ SỬA LOGIC ---
+  // --- LOAD DATA ---
   loadDashboardData(range: string) {
     this.selectedRange = range;
     this.loading.set(true);
 
-    // Params cơ bản
     let params: any = { page: 0, pageSize: 1000 };
-
-    // --- XỬ LÝ DATE LOGIC ---
     const now = new Date();
 
     switch (range) {
-        // 1. CÁC MỐC BACKEND HỖ TRỢ SẴN (Gửi date_preset)
-        case 'today':
-            params.date_preset = 'today';
-            break;
-        case 'yesterday':
-            params.date_preset = 'yesterday';
-            break;
-        case '15days':
-            params.date_preset = 'last15days'; // Mapping '15days' UI -> 'last15days' Backend
-            break;
-
-        // 2. CÁC MỐC CẦN TỰ TÍNH TOÁN Ở FRONTEND (Gửi startDate / endDate)
-        case 'month': // Tháng này (Từ ngày 1 -> Hiện tại)
-            params.startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-            params.endDate = now;
-            break;
-
-        case 'quarter': // Quý này
-            const currentQuarter = Math.floor(now.getMonth() / 3);
-            params.startDate = new Date(now.getFullYear(), currentQuarter * 3, 1);
-            params.endDate = now;
-            break;
-
-        case 'year': // Năm nay
-            params.startDate = new Date(now.getFullYear(), 0, 1);
-            params.endDate = now;
-            break;
-
-        case 'custom': // Tùy chọn
-            if (this.customFromDate && this.customToDate) {
-                params.startDate = this.customFromDate;
-                params.endDate = this.customToDate;
-            }
-            break;
-
-        default:
-            params.date_preset = 'today'; // Mặc định
-            break;
+      case 'today':
+        params.date_preset = 'today';
+        break;
+      case 'yesterday':
+        params.date_preset = 'yesterday';
+        break;
+      case '15days':
+        params.date_preset = 'last15days';
+        break;
+      case 'month':
+        params.startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+        params.endDate = now;
+        break;
+      case 'quarter':
+        const currentQuarter = Math.floor(now.getMonth() / 3);
+        params.startDate = new Date(now.getFullYear(), currentQuarter * 3, 1);
+        params.endDate = now;
+        break;
+      case 'year':
+        params.startDate = new Date(now.getFullYear(), 0, 1);
+        params.endDate = now;
+        break;
+      case 'custom':
+        if (this.customFromDate && this.customToDate) {
+          params.startDate = this.customFromDate;
+          params.endDate = this.customToDate;
+        }
+        break;
+      default:
+        params.date_preset = 'today';
+        break;
     }
 
-    // --- GỌI API ---
-    // Lúc này params sẽ có dạng:
-    // { date_preset: 'today', ... } HOẶC { startDate: Date, endDate: Date, ... }
-    // OrderService sẽ tự động format startDate/endDate thành chuỗi YYYY-MM-DD cho Backend
-
     this.orderService.getOrders(params).subscribe({
-      next: (res) => {
-        if (res.data) {
-          this.orders.set(res.data);
-          this.calculateMetrics(res.data);
-          this.prepareCharts(res.data);
+      next: (res: any) => {
+        // [UPDATE] Cấu trúc mới trả về res.data.items
+        const items = res.data?.items || [];
+        if (items) {
+          this.orders.set(items);
+          this.calculateMetrics(items);
+          this.prepareCharts(items);
         } else {
-            this.orders.set([]); // Reset nếu ko có data
-            this.calculateMetrics([]);
+          this.orders.set([]);
+          this.calculateMetrics([]);
         }
         this.loading.set(false);
       },
       error: () => {
-          this.loading.set(false);
-          this.orders.set([]);
+        this.loading.set(false);
+        this.orders.set([]);
       },
     });
   }
 
   applyCustomDate() {
     if (this.customFromDate && this.customToDate) {
-        this.loadDashboardData('custom');
-        this.closeFilterMenu();
+      this.loadDashboardData('custom');
+      this.closeFilterMenu();
     }
   }
 
   // --- LOGIC TÍNH TOÁN KPI ---
   calculateMetrics(data: Order[]) {
     if (!data || data.length === 0) {
-        this.kpiMetrics.set({
-            uniqueOrders: 0, totalAttempts: 0, efficiencyRatio: 0, reworkRate: 0, riskCount: 0
-        });
-        return;
+      this.kpiMetrics.set({
+        uniqueOrders: 0, totalAttempts: 0, efficiencyRatio: 0, reworkRate: 0, riskCount: 0
+      });
+      return;
     }
 
     const totalAttempts = data.length;
-    const packedOrders = data.filter((o) => (o.status as OrderStatus) === 'PACKED');
+    // [UPDATE] Status mới là 'closed' tương đương với 'PACKED' cũ
+    const packedOrders = data.filter((o: any) => o.status === 'closed');
     const uniqueCodes = new Set(packedOrders.map((o) => String(o.code))).size;
 
-    const reworkCount = data.filter((o) => {
-      const note = o.note || '';
-      const parentId = (o as any).parent_id;
-      return parentId || note.includes('Làm lại');
+    const reworkCount = data.filter((o: any) => {
+      // [UPDATE] Kiểm tra parent_id (DB mới parent_id luôn có giá trị nếu là làm lại)
+      return !!o.parent_id;
     }).length;
 
-    const riskCount = data.filter((o) => {
-      return (o.status as OrderStatus) === 'PACKED' && !o.path_video;
+    const riskCount = data.filter((o: any) => {
+      // [UPDATE] Đơn thành công nhưng thiếu video
+      return o.status === 'closed' && !o.path_video;
     }).length;
 
     this.kpiMetrics.set({
@@ -208,32 +196,41 @@ export class DashboardComponent implements OnInit {
   }
 
   prepareCharts(data: Order[]) {
-    // Reset data nếu rỗng
     if (!data || data.length === 0) {
-        this.reworkChartData = { labels: [], datasets: [] };
-        this.durationChartData = { labels: [], datasets: [] };
-        return;
+      this.reworkChartData = { labels: [], datasets: [] };
+      this.durationChartData = { labels: [], datasets: [] };
+      return;
     }
 
     const reasons: { [key: string]: number } = {};
-    data.forEach((o) => {
+    data.forEach((o: any) => {
       const note = o.note || '';
-      if (note && note !== 'string') {
-        const reason = note.includes('Auto Timeout') ? 'Auto Timeout' :
-                       note.includes('Dừng quay thủ công') ? 'Dừng Thủ Công' :
-                       note.includes('Làm lại') ? 'Làm Lại' : 'Khác';
-        if (reason !== 'Khác' || note.length > 50) {
-          reasons[reason] = (reasons[reason] || 0) + 1;
-        }
+
+      // [UPDATE] Logic phân loại lỗi mới
+      let reason = 'Khác';
+
+      if (o.parent_id) {
+          reason = 'Làm Lại'; // Ưu tiên check parent_id trước
+      } else if (note.includes('Timeout')) {
+          reason = 'Auto Timeout';
+      } else if (note.includes('Manual') || note.includes('Dừng thủ công')) {
+          reason = 'Dừng Thủ Công';
+      } else if (note.includes('Checking Only')) {
+          reason = 'Checking Only';
+      }
+
+      // Chỉ đếm nếu có lý do cụ thể hoặc note đủ dài
+      if (reason !== 'Khác' || note.length > 5) {
+        reasons[reason] = (reasons[reason] || 0) + 1;
       }
     });
 
     this.reworkChartData = {
       labels: Object.keys(reasons),
       datasets: [{
-          data: Object.values(reasons),
-          backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0'],
-        }],
+        data: Object.values(reasons),
+        backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF'],
+      }],
     };
 
     const durations = data.map((o) => this.calculateDurationSeconds(o.start_at, o.closed_at));
@@ -248,18 +245,18 @@ export class DashboardComponent implements OnInit {
     this.durationChartData = {
       labels: ['< 30s', '30-60s', '1-2 phút', '> 2 phút'],
       datasets: [{
-          label: 'Số lượng phiên',
-          data: buckets,
-          backgroundColor: ['#4ade80', '#60a5fa', '#fbbf24', '#f87171'],
-          borderWidth: 0,
-          borderRadius: 4,
-        }],
+        label: 'Số lượng phiên',
+        data: buckets,
+        backgroundColor: ['#4ade80', '#60a5fa', '#fbbf24', '#f87171'],
+        borderWidth: 0,
+        borderRadius: 4,
+      }],
     };
   }
 
   getFullUrl(path?: string): string {
     if (!path || path.trim() === '') {
-        return 'assets/no-image.png';
+      return 'assets/no-image.png';
     }
     if (path.startsWith('http')) return path;
     const baseUrl = environment.apiUrl.endsWith('/') ? environment.apiUrl.slice(0, -1) : environment.apiUrl;
@@ -290,12 +287,13 @@ export class DashboardComponent implements OnInit {
   }
 
   getSeverity(status: string | OrderStatus): 'success' | 'secondary' | 'info' | 'warn' | 'danger' | undefined {
-    const s = String(status).toUpperCase();
+    // [UPDATE] Mapping status mới
+    const s = String(status).toLowerCase();
     switch (s) {
-      case 'PACKED': return 'success';
-      case 'PACKING': return 'info';
-      case 'ISSUE': return 'danger';
-      case 'MERGED': return 'warn';
+      case 'closed': return 'success';
+      case 'cancelled': return 'danger';
+      case 'packed': return 'success'; // Giữ lại backup
+      case 'merging': return 'warn';
       default: return 'secondary';
     }
   }

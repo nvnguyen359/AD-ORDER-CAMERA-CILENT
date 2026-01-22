@@ -20,6 +20,8 @@ import { StorageService } from '../../core/services/storage.service';
 import { environment } from '../../environments/environment';
 import { ActivityStatsComponent } from '../../components/activity-stats.component/activity-stats.component';
 import { CameraWidgetComponent } from '../../components/camera-widget.component/camera-widget.component';
+// [IMPORT MỚI] Pipe format thời gian
+import { TimeFormatPipe } from '../../shared/pipes/time-format-pipe';
 
 @Component({
   selector: 'app-monitor',
@@ -31,6 +33,7 @@ import { CameraWidgetComponent } from '../../components/camera-widget.component/
     ButtonModule,
     TooltipModule,
     ScrollPanelModule,
+    TimeFormatPipe, // [IMPORT MỚI]
   ],
   templateUrl: './monitor.html',
   styleUrls: ['./monitor.scss'],
@@ -51,7 +54,6 @@ export class MonitorComponent implements OnInit, OnDestroy {
   isListLoading = signal<boolean>(false);
 
   private sub: Subscription | null = null;
-  private isTimerPending = false;
 
   ngOnInit() {
     const token = this.storageService.getItem(environment.ACCESS_TOKEN_KEY) || '';
@@ -125,6 +127,7 @@ export class MonitorComponent implements OnInit, OnDestroy {
             order_id: order.id,
             start_time: order.created_at,
             avatar: this.resolveAvatar(order.path_avatar || order.full_avatar_path),
+            note: order.note // Map thêm note
           }));
 
           const currentData = JSON.stringify(this.activePackingOrders());
@@ -170,18 +173,15 @@ export class MonitorComponent implements OnInit, OnDestroy {
         camera_name: this.getCameraName(payload.cam_id),
         code: payload.code,
         order_id: payload.order_id,
-        start_time: new Date(payload.start_time).toISOString(), // Backend gửi timestamp ms
-        avatar: null // Mới tạo chưa có ảnh
+        start_time: new Date(payload.start_time).toISOString(),
+        note: payload.note, // Lấy note từ socket
+        avatar: null
       };
 
-      // Cập nhật Signal: Thêm vào đầu mảng
       this.activePackingOrders.update(current => {
-        // Kiểm tra trùng lặp (đề phòng mạng lag socket bắn 2 lần)
         if (current.some(o => o.code === newOrder.code)) return current;
         return [newOrder, ...current];
       });
-
-      console.log(`🚀 [Socket] New Order: ${newOrder.code}`);
     }
 
     // 2. ĐƠN HÀNG KẾT THÚC -> XÓA KHỎI LIST
@@ -191,9 +191,7 @@ export class MonitorComponent implements OnInit, OnDestroy {
         this.activePackingOrders.update(current =>
           current.filter(o => o.code !== codeToRemove)
         );
-        console.log(`🛑 [Socket] Removed Order: ${codeToRemove}`);
       } else {
-        // Fallback: Nếu không có code, reload lại cho chắc
         this.reloadListSilent();
       }
     }
@@ -213,11 +211,6 @@ export class MonitorComponent implements OnInit, OnDestroy {
           })
         );
       }
-    }
-
-    // 4. Fallback cho các sự kiện khác (QR_SCANNED...)
-    else if (msg.event === 'QR_SCANNED') {
-       // Logic cũ nếu cần
     }
   }
 
