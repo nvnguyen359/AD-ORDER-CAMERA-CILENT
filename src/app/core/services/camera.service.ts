@@ -1,6 +1,7 @@
+// app/core/services/camera.service.ts
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpParams, HttpHeaders } from '@angular/common/http'; // [FIX] Import HttpHeaders
-import { Observable } from 'rxjs';
+import { HttpClient, HttpParams, HttpHeaders } from '@angular/common/http';
+import { Observable, of } from 'rxjs'; // [QUAN TRỌNG] Import 'of' để tạo Fake Response
 
 import { MonitorCamera } from '../models/monitor-camera.model';
 import { environment } from '../../environments/environment';
@@ -58,23 +59,36 @@ export class CameraService {
   }
 
   /**
-   * Ngắt kết nối Camera
-   * API: POST /cameras/{id}/disconnect
+   * [LOGIC MỚI - CHỈ ADMIN MỚI KILL ĐƯỢC]
+   * Ngắt kết nối Camera.
+   * * @param id ID của Camera
+   * @param force
+   * - Nếu true: Gọi API thật để Server KILL process (Dùng ở trang Setting).
+   * - Nếu false (Mặc định): Chỉ trả về success giả để UI hủy widget mà không làm chết cam (Dùng ở Monitor).
    */
-  disconnectCamera(id: number): Observable<ApiResponse<MonitorCamera>> {
-    return this.http.post<ApiResponse<MonitorCamera>>(`${this.apiUrl}/${id}/disconnect`, {});
+  disconnectCamera(id: number, force: boolean = false): Observable<ApiResponse<any>> {
+    if (force) {
+      // [CASE 1] Admin thao tác ở Setting -> Gửi lệnh Kill thật
+      return this.http.post<ApiResponse<any>>(`${this.apiUrl}/${id}/disconnect`, {});
+    } else {
+      // [CASE 2] Monitor chuyển cam / hủy widget -> Fake Success
+      // Giúp luồng Camera ở Backend vẫn sống, không bị gián đoạn ghi hình
+      console.log(`[Client] Disconnect Cam ${id} (UI Only - Process Kept Alive)`);
+      return of({
+        code: 200,
+        mes: 'Disconnected UI Only',
+        data: {}
+      });
+    }
   }
 
   /**
-   * [FIX QUAN TRỌNG] API lấy dữ liệu AI Overlay (Polling)
-   * Thêm header 'X-Skip-Loading' để Interceptor không hiện màn hình chờ (Loading Spinner)
+   * API lấy dữ liệu AI Overlay (Polling)
+   * Thêm header 'X-Skip-Loading' để interceptor không hiện spinner làm phiền
    */
-  getAIOverlay(id: number): Observable<any[]> {
-    return this.http.get<any[]>(`${this.apiUrl}/${id}/ai-overlay`, {
-      headers: new HttpHeaders({
-        'X-Skip-Loading': 'true', // <--- Header này sẽ chặn Loading Global
-      }),
-    });
+  getAIOverlay(id: number): Observable<any> {
+     return this.http.get<any>(`${this.apiUrl}/${id}/ai-overlay`, {
+        headers: new HttpHeaders({ 'X-Skip-Loading': 'true' })
+     });
   }
-  
 }

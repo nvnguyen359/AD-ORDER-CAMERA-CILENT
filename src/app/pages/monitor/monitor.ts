@@ -20,7 +20,6 @@ import { StorageService } from '../../core/services/storage.service';
 import { environment } from '../../environments/environment';
 import { ActivityStatsComponent } from '../../components/activity-stats.component/activity-stats.component';
 import { CameraWidgetComponent } from '../../components/camera-widget.component/camera-widget.component';
-// [IMPORT MỚI] Pipe format thời gian
 import { TimeFormatPipe } from '../../shared/pipes/time-format-pipe';
 
 @Component({
@@ -33,7 +32,7 @@ import { TimeFormatPipe } from '../../shared/pipes/time-format-pipe';
     ButtonModule,
     TooltipModule,
     ScrollPanelModule,
-    TimeFormatPipe, // [IMPORT MỚI]
+    TimeFormatPipe,
   ],
   templateUrl: './monitor.html',
   styleUrls: ['./monitor.scss'],
@@ -50,7 +49,7 @@ export class MonitorComponent implements OnInit, OnDestroy {
   cameras = signal<any[]>([]);
   selectedCamera = signal<any>(null);
   isLoading = signal<boolean>(false);
-  activePackingOrders = signal<any[]>([]); // Danh sách realtime
+  activePackingOrders = signal<any[]>([]); // Danh sách đơn hàng đang đóng (Realtime)
   isListLoading = signal<boolean>(false);
 
   private sub: Subscription | null = null;
@@ -58,12 +57,14 @@ export class MonitorComponent implements OnInit, OnDestroy {
   ngOnInit() {
     const token = this.storageService.getItem(environment.ACCESS_TOKEN_KEY) || '';
 
+    // Kết nối Socket để nhận sự kiện Realtime (Order Created, Stopped...)
     this.streamService.connectSocket(token);
-    this.loadCameras();
 
-    // Load lần đầu tiên khi vào trang
+    // Tải dữ liệu ban đầu
+    this.loadCameras();
     this.loadInitialActiveOrders();
 
+    // Lắng nghe Socket
     this.sub = this.streamService.messages$.subscribe((msg: any) => {
       this.zone.run(() => {
         this.handleSocketMessage(msg);
@@ -93,6 +94,8 @@ export class MonitorComponent implements OnInit, OnDestroy {
       });
 
       this.cameras.set(processedCameras);
+
+      // Tự động chọn camera đầu tiên nếu chưa chọn
       if (!this.selectedCamera() && processedCameras.length > 0) {
         this.selectCamera(processedCameras[0]);
       }
@@ -104,7 +107,6 @@ export class MonitorComponent implements OnInit, OnDestroy {
     this.fetchOrders(true);
   }
 
-  // Vẫn giữ hàm này để đồng bộ dữ liệu nếu cần thiết (backup)
   reloadListSilent() {
     this.fetchOrders(false);
   }
@@ -127,7 +129,7 @@ export class MonitorComponent implements OnInit, OnDestroy {
             order_id: order.id,
             start_time: order.created_at,
             avatar: this.resolveAvatar(order.path_avatar || order.full_avatar_path),
-            note: order.note // Map thêm note
+            note: order.note
           }));
 
           const currentData = JSON.stringify(this.activePackingOrders());
@@ -146,10 +148,14 @@ export class MonitorComponent implements OnInit, OnDestroy {
       });
   }
 
+  // [LOGIC CHỌN CAMERA]
   selectCamera(cam: any) {
     const prevCam = this.selectedCamera();
     if (prevCam && prevCam.id === cam.id) return;
 
+    // Reset về null để ép Angular hủy Widget cũ và tạo Widget mới.
+    // Điều này giúp Widget nhận ID mới chính xác và hiển thị đúng stream.
+    // LƯU Ý: Vì CameraService đã chặn lệnh Kill ở Frontend, nên hành động này AN TOÀN.
     this.selectedCamera.set(null);
     this.isLoading.set(true);
 
@@ -159,11 +165,9 @@ export class MonitorComponent implements OnInit, OnDestroy {
     }, 50);
   }
 
-  // --- XỬ LÝ SOCKET REALTIME (LOGIC MỚI) ---
+  // --- XỬ LÝ SOCKET REALTIME ---
   private handleSocketMessage(msg: any) {
     if (!msg || !msg.event) return;
-
-    // Backend gửi cấu trúc: { event: "...", payload: { ... } }
     const payload = msg.payload || msg.data || {};
 
     // 1. CÓ ĐƠN HÀNG MỚI -> THÊM VÀO ĐẦU LIST
@@ -174,11 +178,11 @@ export class MonitorComponent implements OnInit, OnDestroy {
         code: payload.code,
         order_id: payload.order_id,
         start_time: new Date(payload.start_time).toISOString(),
-        note: payload.note, // Lấy note từ socket
+        note: payload.note,
         avatar: null
       };
-
       this.activePackingOrders.update(current => {
+        // Tránh trùng lặp
         if (current.some(o => o.code === newOrder.code)) return current;
         return [newOrder, ...current];
       });
@@ -192,6 +196,7 @@ export class MonitorComponent implements OnInit, OnDestroy {
           current.filter(o => o.code !== codeToRemove)
         );
       } else {
+        // Fallback: Reload lại toàn bộ nếu không có code cụ thể
         this.reloadListSilent();
       }
     }
@@ -200,7 +205,6 @@ export class MonitorComponent implements OnInit, OnDestroy {
     else if (msg.event === 'ORDER_UPDATED') {
       const orderId = payload.order_id;
       const newAvatarPath = payload.path_avatar;
-
       if (orderId && newAvatarPath) {
         this.activePackingOrders.update(current =>
           current.map(o => {

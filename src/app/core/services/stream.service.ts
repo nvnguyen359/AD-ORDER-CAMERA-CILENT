@@ -1,7 +1,7 @@
 import { Injectable, Inject, PLATFORM_ID, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { isPlatformBrowser } from '@angular/common';
-import { Observable, Subject } from 'rxjs';
+import { Observable, Subject, of } from 'rxjs'; // [FIX] Import 'of' để tạo Fake Response
 import { webSocket, WebSocketSubject } from 'rxjs/webSocket';
 import { filter, share, retryWhen, delay, tap } from 'rxjs/operators';
 import { jwtDecode } from 'jwt-decode';
@@ -32,7 +32,7 @@ export class StreamService {
   private get baseUrl() { return `${environment.apiUrl}${this.API_PREFIX}`; }
   private get wsUrl() { return environment.apiUrl.replace(/^http/, 'ws') + this.API_PREFIX + '/ws'; }
 
-  // --- SOCKET METHODS (Giữ nguyên) ---
+  // --- SOCKET METHODS ---
   connectSocket(token?: string, cameraId?: number): void {
     if (!isPlatformBrowser(this.platformId)) return;
     if (!token) token = localStorage.getItem('token') || '';
@@ -85,16 +85,30 @@ export class StreamService {
     return this.http.get(this.baseUrl);
   }
 
-  toggleCamera(id: number, action: 'connect' | 'disconnect'): Observable<any> {
+  /**
+   * [FIX QUAN TRỌNG] Bật/Tắt Camera
+   * @param id Camera ID
+   * @param action 'connect' | 'disconnect'
+   * @param force
+   * - True: Gửi lệnh thật lên Server để Kill Process (Dùng cho Admin/Setting).
+   * - False (Mặc định): Chỉ ngắt UI, không gửi lệnh disconnect lên Server (Dùng cho Monitor).
+   */
+  toggleCamera(id: number, action: 'connect' | 'disconnect', force: boolean = false): Observable<any> {
+    if (action === 'disconnect' && !force) {
+        // Monitor ngắt kết nối -> Trả về Success giả -> Server KHÔNG Kill process
+        console.log(`[StreamService] Blocked 'disconnect' for Cam ${id} (UI Only)`);
+        return of({ success: true, message: 'UI Disconnected Only' });
+    }
+    // Admin force hoặc lệnh Connect -> Gọi API thật
     return this.http.post(`${this.baseUrl}/${id}/${action}`, {});
   }
 
-  // [FIX] Sửa lại gọi đúng API Backend /record?action=start
+  // API Backend nhận query param: /record?action=start&code=...
   startRecording(id: number, code: string = 'MANUAL'): Observable<any> {
     return this.http.post(`${this.baseUrl}/${id}/record?action=start&code=${code}`, {});
   }
 
-  // [FIX] Sửa lại gọi đúng API Backend /record?action=stop
+  // API Backend nhận query param: /record?action=stop
   stopRecording(id: number): Observable<any> {
     return this.http.post(`${this.baseUrl}/${id}/record?action=stop`, {});
   }
