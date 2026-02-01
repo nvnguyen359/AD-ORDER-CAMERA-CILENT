@@ -1,14 +1,14 @@
 <p-toast></p-toast>
 
 <div class="surface-section p-4 md:p-6 lg:p-8">
-  <div class="grid max-w-7xl mx-auto">
+  <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 max-w-full mx-auto pb-8">
 
     <div class="col-span-1">
-      <p-card header="⚙️ Camera & Hình ảnh" styleClass="h-full">
-        <form [formGroup]="settingForm" class="flex flex-col gap-4">
+      <p-card header="⚙️ Camera & Hình ảnh" styleClass="h-full shadow-md">
+        <form [formGroup]="settingForm" class="flex flex-col gap-5">
 
-          <div class="flex flex-col gap-1">
-            <label class="font-semibold text-gray-700">Độ phân giải (Resolution)</label>
+          <div class="flex flex-col gap-2">
+            <label class="font-bold text-gray-700">Độ phân giải (Resolution)</label>
             <p-select
               [options]="resolutions"
               formControlName="resolution"
@@ -17,17 +17,18 @@
               placeholder="Chọn độ phân giải"
               styleClass="w-full"
               (onChange)="saveSettings()"> </p-select>
-            <small class="text-gray-500">Chọn tỉ lệ chuẩn (16:9 hoặc 4:3) để hình ảnh không bị méo.</small>
+            <small class="text-blue-500"><i class="pi pi-info-circle"></i> 854x480 là mức mượt nhất cho Orange Pi 3.</small>
           </div>
 
-          <div class="flex flex-col gap-1">
-            <label class="font-semibold text-gray-700">Thư mục lưu trữ</label>
+          <div class="flex flex-col gap-2">
+            <label class="font-bold text-gray-700">Thư mục lưu trữ</label>
             <input
               pInputText
               formControlName="save_media"
-              placeholder="OC-media"
+              placeholder="app/media"
               class="w-full"
-              (blur)="saveSettings()" /> <small class="text-gray-500">Tên thư mục gốc để lưu Video/Ảnh</small>
+              (blur)="saveSettings()" />
+            <small class="text-gray-500">Nơi lưu Video/Ảnh trên thẻ nhớ.</small>
           </div>
 
         </form>
@@ -35,11 +36,11 @@
     </div>
 
     <div class="col-span-1">
-      <p-card header="🤖 Vận hành & AI" styleClass="h-full">
-        <form [formGroup]="settingForm" class="flex flex-col gap-4">
+      <p-card header="🤖 Vận hành & AI" styleClass="h-full shadow-md">
+        <form [formGroup]="settingForm" class="flex flex-col gap-5">
 
-          <div class="flex flex-col gap-1">
-            <label class="font-semibold text-gray-700">Thời gian tự ngắt (Timeout)</label>
+          <div class="flex flex-col gap-2">
+            <label class="font-bold text-gray-700">Timeout (Tự ngắt)</label>
             <p-select
               [options]="timeoutOptions"
               formControlName="timeout_no_human"
@@ -48,21 +49,11 @@
               placeholder="Chọn thời gian chờ"
               styleClass="w-full"
               (onChange)="saveSettings()"> </p-select>
-            <small class="text-gray-500">Tự động đóng đơn nếu không thấy người sau khoảng thời gian này.</small>
+            <small class="text-gray-500">Tự đóng đơn nếu Camera không thấy người.</small>
           </div>
 
-          <div class="flex flex-col gap-1">
-            <label class="font-semibold text-gray-700">Giờ kết thúc ca (End Shift)</label>
-            <input
-              pInputText
-              type="time"
-              formControlName="work_end_time"
-              class="w-full"
-              (change)="saveSettings()" /> <small class="text-gray-500">Hệ thống sẽ tự động tắt và đóng đơn sau giờ này (Định dạng HH:MM).</small>
-          </div>
-
-          <div class="flex flex-col gap-1 border-top-1 border-gray-200 pt-3 mt-2">
-            <label class="font-semibold text-gray-700">Độ nhạy AI (Confidence)</label>
+          <div class="flex flex-col gap-2">
+            <label class="font-bold text-gray-700">Độ nhạy AI (Confidence)</label>
             <p-select
               [options]="aiOptions"
               formControlName="ai_confidence"
@@ -71,7 +62,70 @@
               placeholder="Chọn độ nhạy"
               styleClass="w-full"
               (onChange)="saveSettings()"> </p-select>
-            <small class="text-gray-500">Ngưỡng tin cậy để AI nhận diện. Thấp quá sẽ nhận nhầm, cao quá sẽ khó nhận.</small>
+          </div>
+
+          <div class="flex flex-col gap-2">
+             <label class="font-bold text-gray-700">Đọc số cuối mã đơn (TTS)</label>
+             <div class="flex align-items-center gap-2">
+                <input pInputText type="number" formControlName="read_end_order" class="w-4rem" min="3" max="10">
+                <span class="text-gray-600">số cuối</span>
+             </div>
+             <small class="text-gray-500">Ví dụ: Mã ...8829 -> Đọc "Hai chín".</small>
+          </div>
+
+          <div class="flex flex-col gap-2">
+            <label class="font-bold text-gray-700">Giờ kết thúc ca</label>
+            <input
+              pInputText
+              type="time"
+              formControlName="work_end_time"
+              class="w-full"
+              (change)="saveSettings()" />
+          </div>
+
+        </form>
+      </p-card>
+    </div>
+
+    <div class="col-span-1">
+      <p-card header="🚀 Tối ưu Hiệu năng (Orange Pi)" styleClass="h-full shadow-md surface-50 border-blue-100 border-1">
+        <form [formGroup]="settingForm" class="flex flex-col gap-5">
+
+          <div class="flex flex-col gap-2">
+            <label class="font-bold text-red-600">FPS Ghi hình (Record)</label>
+            <p-select
+              [options]="fpsOptions"
+              formControlName="perf_record_fps"
+              optionLabel="label"
+              optionValue="value"
+              styleClass="w-full"
+              (onChange)="saveSettings()"></p-select>
+            <small class="text-gray-500">Thấp (10-12) giúp CPU không bị quá tải khi nén video.</small>
+          </div>
+
+          <div class="flex flex-col gap-2">
+            <label class="font-bold text-blue-600">FPS Hiển thị (View)</label>
+            <p-select
+              [options]="fpsViewOptions"
+              formControlName="perf_view_fps"
+              optionLabel="label"
+              optionValue="value"
+              styleClass="w-full"
+              (onChange)="saveSettings()"></p-select>
+            <small class="text-gray-500">Giới hạn tốc độ xử lý ảnh để máy mát hơn.</small>
+          </div>
+
+          <div class="flex flex-col gap-2">
+            <label class="font-bold text-purple-600">Tần suất AI (Interval)</label>
+            <div class="flex align-items-center gap-2">
+               <span class="font-bold">Mỗi</span>
+               <input pInputText type="number" formControlName="perf_ai_interval" class="w-5rem text-center" min="1" max="30">
+               <span class="font-bold">frame quét 1 lần</span>
+            </div>
+            <small class="text-gray-500">
+               Tăng số này lên (vd: 12, 15) nếu máy bị lag.
+               <br>12 = Quét 2 lần/giây.
+            </small>
           </div>
 
         </form>
@@ -80,13 +134,13 @@
 
   </div>
 
-  <div class="fixed-footer">
+  <div class="fixed bottom-0 left-0 w-full bg-white border-t border-gray-200 p-3 flex justify-center z-50 shadow-lg">
     <p-button
-      label="Lưu Cấu Hình"
+      label="Lưu Tất Cả Cấu Hình"
       icon="pi pi-save"
       (onClick)="saveSettings()"
       [loading]="isLoading"
-      styleClass="p-button-primary px-6 p-button-rounded shadow-lg">
+      styleClass="p-button-primary px-6 p-button-rounded font-bold">
     </p-button>
   </div>
 </div>
