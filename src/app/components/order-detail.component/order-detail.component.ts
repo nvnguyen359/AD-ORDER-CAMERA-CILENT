@@ -27,7 +27,6 @@ import { TooltipModule } from 'primeng/tooltip';
 import { OrderService } from '../../core/services/order.service';
 import { environment } from '../../environments/environment';
 import { OrderStatusPipe } from '../../shared/pipes/order-status-pipe';
-// [FIX] 1. Import SettingsService
 import { SettingsService } from '../../core/services/settings.service';
 
 @Component({
@@ -59,7 +58,6 @@ export class OrderDetailComponent implements OnInit, OnChanges {
   private orderService = inject(OrderService);
   private location = inject(Location);
   private http = inject(HttpClient);
-  // [FIX] 2. Inject SettingsService
   private settingsService = inject(SettingsService);
 
   loading = signal<boolean>(true);
@@ -70,8 +68,7 @@ export class OrderDetailComponent implements OnInit, OnChanges {
   isPlaying = signal<boolean>(false);
   durationString = signal<string>('');
 
-  // [FIX] 3. Thêm Signal lưu tỉ lệ khung hình (Mặc định 16/9)
-  // Biến này sẽ được bind vào [style.aspect-ratio] bên HTML
+  // Tỉ lệ khung hình (Mặc định 16/9)
   aspectRatio = signal<string>('16 / 9');
 
   constructor() {
@@ -82,22 +79,19 @@ export class OrderDetailComponent implements OnInit, OnChanges {
   }
 
   ngOnInit() {
-    // [FIX] 4. Gọi API lấy cấu hình width/height để tính tỉ lệ
+    // Lấy settings từ server để set tỉ lệ video
     this.settingsService.getSettings().subscribe({
       next: (settings: any) => {
-        // settings trả về object dạng { camera_width: "...", ... }
         const w = Number(settings['camera_width']);
         const h = Number(settings['camera_height']);
 
         if (!isNaN(w) && !isNaN(h) && w > 0 && h > 0) {
-            // Cập nhật aspect-ratio theo đúng cấu hình hệ thống
             this.aspectRatio.set(`${w} / ${h}`);
         }
       },
       error: (err) => console.warn('Không thể tải settings, dùng tỉ lệ mặc định.', err)
     });
 
-    // Logic cũ giữ nguyên
     if (this.inputCode) {
       this.fetchOrders(this.inputCode);
     } else {
@@ -126,18 +120,41 @@ export class OrderDetailComponent implements OnInit, OnChanges {
             list = responseData.data;
         }
 
-        this.orderList.set(list);
+        // --- [LOGIC MỚI] LÀM PHẲNG DANH SÁCH (FLATTEN) ---
+        // Vì backend trả về dạng gom nhóm (Main Item chứa History Logs),
+        // ta cần bung nó ra để hiển thị đầy đủ trên Timeline/List.
+        let flatList: any[] = [];
+
+        list.forEach((item: any) => {
+            // Thêm item chính (Main)
+            flatList.push(item);
+
+            // Nếu có lịch sử con (Repack/Checking cũ), thêm hết vào list
+            if (item.history_logs && Array.isArray(item.history_logs)) {
+                flatList.push(...item.history_logs);
+            }
+        });
+
+        // Sắp xếp lại theo thời gian giảm dần (Mới nhất lên đầu)
+        // Để đảm bảo Timeline hiển thị đúng thứ tự từ trên xuống dưới
+        flatList.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+        // Cập nhật signal với danh sách đã làm phẳng
+        this.orderList.set(flatList);
+        // -------------------------------------------------
 
         const playIdStr = this.route.snapshot.queryParamMap.get('playId');
         let targetOrder = null;
 
-        if (playIdStr && list.length > 0) {
+        // Tìm item cần play trong danh sách đã làm phẳng
+        if (playIdStr && flatList.length > 0) {
           const playId = Number(playIdStr);
-          targetOrder = list.find((item: { id: number }) => item.id === playId);
+          targetOrder = flatList.find((item: { id: number }) => item.id === playId);
         }
 
-        if (!targetOrder && list.length > 0) {
-          targetOrder = list[0];
+        // Nếu không tìm thấy hoặc không có playId, chọn item mới nhất (đầu danh sách)
+        if (!targetOrder && flatList.length > 0) {
+          targetOrder = flatList[0];
         }
 
         if (targetOrder) {

@@ -16,6 +16,7 @@ import { menuItems } from './Menu';
 import { AuthService } from './core/services/auth.service';
 import { BoxSearchComponent } from './components/box-search.component/box-search.component';
 import { OrderService } from './core/services/order.service';
+import { SystemMonitorComponent } from './components/system-monitor.component/system-monitor.component';
 
 @Component({
   selector: 'app-root',
@@ -30,7 +31,7 @@ import { OrderService } from './core/services/order.service';
     DrawerModule,
     ButtonModule,
     ToastModule,
-    BoxSearchComponent,
+    BoxSearchComponent,SystemMonitorComponent
   ],
   templateUrl: './app.html',
   styleUrls: ['./app.scss'],

@@ -1,115 +1,129 @@
-<div class="history-container flex flex-column gap-0 pb-4">
-  @for (group of sessionGroups(); track group.rootId) {
-  <div class="session-wrapper w-full">
-    <div class="surface-card border-round-xl shadow-2 overflow-hidden border-1 surface-border">
+<div class="history-container flex flex-column gap-3 pb-5 px-2">
+    @for (group of sessionGroups(); track group.rootId) {
 
-      <div
-        class="p-3 bg-blue-50 border-bottom-1 border-blue-100 flex justify-content-between align-items-center cursor-pointer hover:bg-blue-100 transition-colors"
-        (click)="toggleExpand(group, $event)">
+    <div class="history-card w-full cursor-pointer group bg-white border-round-2xl overflow-hidden relative border-1 border-transparent transition-all transition-duration-300"
+         [class.expanded]="group.isExpanded"
+         [class.shadow-4]="group.isExpanded"
+         [class.shadow-1]="!group.isExpanded"
+         (click)="toggleExpand(group, $event)">
 
-        <div class="flex gap-3 align-items-center overflow-hidden">
-          <p-avatar [image]="getAvatar(group.latestOrder.path_avatar)" shape="circle" size="large"
-            styleClass="bg-white flex-shrink-0"></p-avatar>
-
-          <div class="flex flex-column min-w-0 gap-1">
-            <div class="flex align-items-center gap-2">
-              <span class="font-bold text-primary-600 text-xl white-space-nowrap overflow-hidden text-overflow-ellipsis">{{
-                group.latestOrder.code }}</span>
-
-              <i *ngIf="group.latestOrder.status === 'packed'"
-                class="pi pi-check-circle text-green-500 text-xl cursor-pointer" pTooltip="Đã hoàn thành (Packed)"
-                tooltipPosition="right"></i>
-
-              <i *ngIf="group.latestOrder.status === 'packing'"
-                class="pi pi-spin pi-spinner text-blue-500 text-xl cursor-pointer" pTooltip="Đang đóng gói (Packing)"
-                tooltipPosition="right"></i>
-
-              <i *ngIf="group.latestOrder.status !== 'packed' && group.latestOrder.status !== 'packing'"
-                class="pi pi-stop-circle text-gray-400 text-xl cursor-pointer" pTooltip="Đã kết thúc (Closed/Error)"
-                tooltipPosition="right"></i>
-            </div>
-
-            <div class="text-sm text-gray-600 flex align-items-center gap-2 flex-wrap">
-              <span class="font-medium text-gray-800 bg-white px-2 py-0 border-round shadow-sm">
-                <i class="pi pi-calendar mr-1 text-xs"></i>{{ group.dateLabel }}
-              </span>
-              <span class="hidden sm:inline opacity-60">•</span>
-
-              <span><i class="pi pi-user mr-1"></i>{{ group.latestOrder.packer_name || '#' + group.latestOrder.user_id
-                }}</span>
-              <span class="opacity-60">•</span>
-              <span>{{ group.totalSteps }} bước</span>
-            </div>
-          </div>
+        <div class="status-strip absolute left-0 top-0 bottom-0"
+             [ngClass]="{
+                'bg-green-500': group.latestOrder.status === 'packed' || group.latestOrder.status === 'closed',
+                'bg-blue-500': group.latestOrder.status === 'packing' || group.latestOrder.status === 'processing',
+                'bg-red-500': group.latestOrder.status === 'cancelled'
+             }" style="width: 6px; z-index: 1;">
         </div>
 
-        <div class="flex align-items-center gap-3 flex-shrink-0">
-          <button pButton icon="pi pi-play" [rounded]="true" class="btn-play-gradient shadow-2"
-            pTooltip="Xem video mới nhất" tooltipPosition="left"
-            (click)="$event.stopPropagation(); viewDetail(group.latestOrder)">
-          </button>
+        <div class="flex p-3 align-items-center pl-4">
 
-          <i class="pi text-gray-500 text-lg transition-transform duration-200"
-            [ngClass]="group.isExpanded ? 'pi-chevron-up' : 'pi-chevron-down'"></i>
-        </div>
-      </div>
-
-      <div class="p-3 pt-0 relative bg-white transition-all duration-300 ease-in-out" *ngIf="group.isExpanded">
-
-        <div class="timeline-line"></div>
-
-        <div class="flex flex-column gap-0">
-          @for (step of group.steps; track step.data.id; let isLast = $last) {
-          <div class="timeline-item flex gap-3 pt-3 relative z-0">
-
-            <div class="flex flex-column align-items-center" style="width: 3rem;">
-              <span class="text-sm font-bold text-gray-600 mb-1 bg-white px-1 z-1">{{ step.timeStr }}</span>
-              <div
-                class="w-2rem h-2rem border-circle border-1 flex align-items-center justify-content-center shadow-1 bg-white z-1"
-                [ngClass]="{
-                                            'border-green-500 text-green-600': step.data.status === 'packed',
-                                            'border-gray-300 text-gray-400': step.data.status !== 'packed',
-                                            'bg-orange-50 border-orange-400': step.isCodeChanged
-                                         }">
-                <i class="pi text-sm" [ngClass]="step.data.parent_id ? 'pi-replay' : 'pi-box'"></i>
-              </div>
+            <div class="mr-3">
+                <div class="time-box flex flex-column align-items-center justify-content-center border-round-xl surface-100 text-700" style="width: 4rem; height: 4rem;">
+                    <span class="text-xl font-bold line-height-1">{{ group.timeLabel }}</span>
+                    <span class="text-xs text-500 mt-1 font-medium">#{{ group.stt }}</span>
+                </div>
             </div>
 
-            <div class="flex-grow-1 min-w-0 pb-3 border-bottom-1 surface-border" [class.border-none]="isLast">
-              <div class="flex justify-content-between align-items-start">
-                <div class="flex flex-column gap-2">
-                  <div *ngIf="step.isCodeChanged"
-                    class="inline-flex align-items-center gap-2 bg-orange-50 text-orange-800 text-sm px-2 py-1 border-round font-bold border-1 border-orange-200 w-fit">
-                    <i class="pi pi-exclamation-triangle text-orange-600"></i> Đổi mã: {{ step.data.code }}
-                  </div>
+            <div class="flex-grow-1 min-w-0 flex flex-column justify-content-center gap-2">
+                <div class="flex align-items-center gap-2">
+                    <span class="text-xl font-bold text-900 white-space-nowrap hover:text-primary transition-colors">
+                        {{ group.latestOrder.code }}
+                    </span>
 
-                  <div *ngIf="!step.isCodeChanged && step.data.code !== group.latestOrder.code"
-                    class="text-sm text-green-600 font-medium">
-                    {{ step.data.code }}
-                  </div>
-
-                  <div class="text-sm text-gray-700 bg-gray-50 p-2 border-round border-1 surface-border line-height-3">
-                    {{ step.data.note || 'Không có ghi chú' }}
-                  </div>
+                    @if(group.latestOrder.status === 'cancelled') {
+                        <span class="text-xs font-bold text-red-600 bg-red-100 px-2 py-1 border-round">Đã hủy</span>
+                    }
                 </div>
 
-                <button pButton icon="pi pi-play" [rounded]="true" class="btn-play-mini shadow-1 flex-shrink-0 ml-2"
-                  pTooltip="Xem video bước này" tooltipPosition="left" (click)="viewDetail(step.data)">
-                </button>
-              </div>
+                <div class="flex align-items-center flex-wrap gap-2">
+                    <span class="meta-capsule bg-gray-50 text-gray-600 border-1 border-gray-200 px-2 py-1 border-round-2xl text-xs font-semibold flex align-items-center">
+                        <i class="pi pi-calendar mr-1 text-[10px]"></i> {{ group.dateLabel }}
+                    </span>
+
+                    <span class="meta-capsule bg-blue-50 text-blue-600 border-1 border-blue-100 px-2 py-1 border-round-2xl text-xs font-semibold flex align-items-center">
+                        <i class="pi pi-box mr-1 text-[10px]"></i> Gốc: {{ group.realCount }}
+                    </span>
+
+                    @if (group.repackCount > 0) {
+                        <span class="meta-capsule bg-orange-50 text-orange-600 border-1 border-orange-100 px-2 py-1 border-round-2xl text-xs font-semibold flex align-items-center">
+                            <i class="pi pi-refresh mr-1 text-[10px]"></i> Repack: {{ group.repackCount }}
+                        </span>
+                    }
+
+                    <span class="text-xs text-gray-400 ml-1 font-medium hidden sm:inline">{{ group.totalSteps }} bước xử lý</span>
+                </div>
             </div>
-          </div>
-          }
+
+            <div class="flex align-items-center gap-4 pl-4 pr-2 border-left-1 border-gray-100 h-full">
+                <button pButton icon="pi pi-play"
+                        class="btn-play-gradient flex align-items-center justify-content-center p-0 border-circle border-none text-white shadow-2 transition-transform transition-duration-200 hover:scale-110"
+                        style="width: 3rem; height: 3rem; background: linear-gradient(135deg, #f59e0b 0%, #ea580c 100%);"
+                        (click)="$event.stopPropagation(); viewDetail(group.latestOrder)">
+                </button>
+
+                <button pButton icon="pi pi-chevron-down" [text]="true" [rounded]="true" severity="secondary"
+                        class="w-2rem h-2rem transition-transform"
+                        [@rotateIcon]="group.isExpanded ? 'expanded' : 'collapsed'">
+                </button>
+            </div>
         </div>
-      </div>
 
+        <div [@expandCollapse]="group.isExpanded ? 'expanded' : 'collapsed'"
+             class="border-top-1 surface-border bg-gray-50 relative overflow-hidden">
+
+            <div class="history-details-scroll relative">
+
+                <div class="absolute left-0 top-0 bottom-0 border-left-2 border-dashed border-300" style="left: 2rem; z-index: 0;"></div>
+
+                <div class="p-3 pl-5 flex flex-column gap-0">
+                    @for (step of group.steps; track step.data.id; let last = $last) {
+                        <div class="flex relative py-3 hover:surface-100 border-round transition-colors px-2 cursor-pointer"
+                             [class.border-bottom-1]="!last"
+                             style="border-color: rgba(0,0,0,0.05);"
+                             (click)="viewDetail(step.data, group.latestOrder.code)">
+
+                            <div class="absolute mt-3 w-1rem h-1rem border-circle bg-white border-2 z-1 flex align-items-center justify-content-center"
+                                 style="left: -1.4rem;"
+                                 [ngClass]="step.data.parent_id ? 'border-orange-400' : 'border-blue-400'">
+                                 <div class="w-1 h-1 border-circle" [ngClass]="step.data.parent_id ? 'bg-orange-400' : 'bg-blue-400'"></div>
+                            </div>
+
+                            <div class="w-4rem text-right text-xs font-bold text-gray-500 pt-1 mr-3 flex-shrink-0">
+                                {{ step.timeStr }}
+                            </div>
+
+                            <div class="flex-grow-1 flex align-items-center justify-content-between">
+                                <div class="flex flex-column gap-1">
+                                    <span class="text-sm font-medium text-gray-800">
+                                        {{ step.data.note || 'Chi tiết đơn hàng' }}
+                                    </span>
+                                    @if(step.isCodeChanged) {
+                                        <span class="text-xs text-orange-600 bg-orange-100 px-2 border-round w-fit">
+                                            Đã đổi mã: {{ step.data.code }}
+                                        </span>
+                                    }
+                                    <span class="text-[10px] text-gray-400">ID: {{ step.data.id }}</span>
+                                </div>
+
+                                <button pButton icon="pi pi-play" [text]="true" [rounded]="true"
+                                        class="text-gray-400 hover:text-primary hover:bg-white w-2rem h-2rem"
+                                        (click)="$event.stopPropagation(); viewDetail(step.data, group.latestOrder.code)">
+                                </button>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
     </div>
-  </div>
-  }
-
-  <div id="scroll-sentinel" class="h-2rem w-full flex justify-content-center align-items-center">
-    @if (isLoadingMore) {
-    <i class="pi pi-spin pi-spinner text-primary text-2xl"></i>
     }
-  </div>
+
+    <div id="scroll-sentinel" class="h-3rem flex align-items-center justify-content-center">
+        @if (isLoadingMore) {
+            <div class="flex align-items-center gap-2">
+                <i class="pi pi-spin pi-spinner text-primary text-xl"></i>
+                <span class="text-gray-500 text-sm">Đang tải thêm...</span>
+            </div>
+        }
+    </div>
 </div>

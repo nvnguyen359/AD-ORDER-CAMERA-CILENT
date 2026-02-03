@@ -1,5 +1,43 @@
-#history-scroll-container{
+/* [FIX] 1. Thiết lập chiều cao cho Host để kích hoạt Flexbox Scroll */
+:host {
+  display: block;
+  height: 100vh; /* Ép chiều cao bằng màn hình (hoặc 100% nếu cha đã có height) */
+  overflow: hidden; /* Ngăn cuộn trang chính */
+}
+
+/* [FIX] 2. Đảm bảo container chính chiếm hết chiều cao */
+.flex.flex-column.h-full {
+  height: 100%;
+  overflow: hidden;
+}
+
+/* [FIX] 3. Tùy chỉnh thanh tìm kiếm (Sticky Fallback) */
+app-order-search {
+  /* Phòng trường hợp layout cha bị vỡ, dùng sticky để neo lại */
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background-color: var(--surface-ground, #f8fafc); /* Đảm bảo nền không trong suốt */
+}
+
+/* Custom Scrollbar cho danh sách */
+#history-scroll-container {
   padding-left: 0!important;
   padding-right: 0!important;
   padding-bottom: 2px!important;
+
+  /* Thêm scrollbar đẹp */
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  &::-webkit-scrollbar-thumb {
+    background-color: #cbd5e1;
+    border-radius: 4px;
+    &:hover {
+        background-color: #94a3b8;
+    }
+  }
 }

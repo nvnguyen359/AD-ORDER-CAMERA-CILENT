@@ -4,6 +4,7 @@ import { CommonModule } from '@angular/common';
 import { StreamService } from '../../core/services/stream.service'; // Giả sử service này quản lý socket
 import { Subscription } from 'rxjs';
 import { StatsService } from '../../core/services/stats.service';
+import { Router } from '@angular/router';
 
 @Component({
   selector: 'app-activity-stats',
@@ -16,7 +17,7 @@ export class ActivityStatsComponent implements OnInit, OnDestroy {
   private statsService = inject(StatsService);
   private streamService = inject(StreamService); // Service nhận Socket message
   private sub: Subscription | null = null;
-
+  private router = inject(Router);
   // Sử dụng Signal cho hiệu năng cao
   completedCount = signal<number>(0);
   packingCount = signal<number>(0);
@@ -69,5 +70,8 @@ export class ActivityStatsComponent implements OnInit, OnDestroy {
 
       // Trường hợp 'ORDER_UPDATED' (Update Avatar) không ảnh hưởng số lượng nên bỏ qua
     }
+  }
+  navigateToHistory() {
+    this.router.navigate(['/history']);
   }
 }

@@ -1,12 +1,13 @@
 import { Component, Input, OnChanges, SimpleChanges, Output, EventEmitter, inject, signal, ElementRef, ViewChild, AfterViewInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
+import { trigger, state, style, transition, animate } from '@angular/animations';
 
-// PrimeNG
 import { ButtonModule } from 'primeng/button';
 import { AvatarModule } from 'primeng/avatar';
 import { TooltipModule } from 'primeng/tooltip';
 import { BadgeModule } from 'primeng/badge';
+import { TagModule } from 'primeng/tag';
 
 import { environment } from '../../environments/environment';
 
@@ -14,34 +15,52 @@ export interface TimelineStep {
   data: any;
   isCodeChanged: boolean;
   timeStr: string;
+  fullDateTimeStr: string;
 }
 
 export interface SessionGroup {
+  stt: number;
   rootId: number;
   dateLabel: string;
+  timeLabel: string;
   latestOrder: any;
   steps: TimelineStep[];
   totalSteps: number;
+  repackCount: number;
+  realCount: number;
   durationStr: string;
-  isManual: boolean;
-  isExpanded: boolean; // Trạng thái mở rộng/thu gọn
+  isExpanded: boolean;
 }
 
 @Component({
   selector: 'app-order-history',
   standalone: true,
   imports: [
-    CommonModule, ButtonModule, AvatarModule, TooltipModule, BadgeModule
+    CommonModule, ButtonModule, AvatarModule, TooltipModule, BadgeModule, TagModule
   ],
   templateUrl: './order-history.component.html',
-  styleUrls: ['./order-history.component.scss']
+  styleUrls: ['./order-history.component.scss'],
+  animations: [
+    trigger('expandCollapse', [
+      state('collapsed', style({ height: '0px', opacity: 0, overflow: 'hidden', paddingTop: '0px', paddingBottom: '0px' })),
+      state('expanded', style({ height: '*', opacity: 1, overflow: 'hidden', paddingTop: '*', paddingBottom: '*' })),
+      transition('collapsed <=> expanded', [animate('300ms cubic-bezier(0.4, 0.0, 0.2, 1)')])
+    ]),
+    trigger('rotateIcon', [
+      state('collapsed', style({ transform: 'rotate(0deg)' })),
+      state('expanded', style({ transform: 'rotate(180deg)' })),
+      transition('collapsed <=> expanded', animate('300ms ease-out'))
+    ])
+  ]
 })
 export class OrderHistoryComponent implements OnChanges, AfterViewInit, OnDestroy {
   @Input() orders: any[] = [];
-  @Input() isLoadingMore: boolean = false; // Trạng thái đang tải thêm trang
-  @Input() hasMoreData: boolean = true;    // Còn dữ liệu để tải không
+  @Input() isLoadingMore: boolean = false;
+  @Input() hasMoreData: boolean = true;
 
-  @Output() loadMore = new EventEmitter<void>(); // Bắn sự kiện ra cha để tải thêm
+  @Output() loadMore = new EventEmitter<void>();
+
+  // [ĐÃ XÓA] Output totalChange vì không cần thiết nữa
 
   @ViewChild('scrollContainer') scrollContainer!: ElementRef;
 
@@ -52,7 +71,7 @@ export class OrderHistoryComponent implements OnChanges, AfterViewInit, OnDestro
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['orders']) {
-      // Mỗi khi danh sách orders thay đổi (do search mới hoặc load more), tính toán lại nhóm
+      // Chỉ xử lý dữ liệu để hiển thị, không tính toán tổng số nữa
       const groups = this.processData(this.orders || []);
       this.sessionGroups.set(groups);
     }
@@ -63,91 +82,56 @@ export class OrderHistoryComponent implements OnChanges, AfterViewInit, OnDestro
   }
 
   ngOnDestroy() {
-    if (this.scrollObserver) {
-      this.scrollObserver.disconnect();
-    }
+    if (this.scrollObserver) this.scrollObserver.disconnect();
   }
 
-  // --- LOGIC GOM NHÓM ---
   private processData(list: any[]): SessionGroup[] {
     if (!list || list.length === 0) return [];
 
-    const itemMap = new Map(list.map(i => [i.id, i]));
-    const findRoot = (item: any): number => {
-      if (!item.parent_id) return item.id;
-      // Chỉ đệ quy nếu cha tồn tại trong list hiện tại (để tránh lỗi khi phân trang cắt ngang)
-      // Nếu không tìm thấy cha trong batch này, tạm coi chính nó là root của batch đó
-      return itemMap.has(item.parent_id) ? findRoot(itemMap.get(item.parent_id)) : item.id;
-    };
+    return list.map((mainItem, index) => {
+      const history = mainItem.history_logs || [];
+      const allItems = [mainItem, ...history];
+      allItems.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
-    const groupMap = new Map<number, any[]>();
-    list.forEach(item => {
-      const rootId = findRoot(item);
-      if (!groupMap.has(rootId)) groupMap.set(rootId, []);
-      groupMap.get(rootId)?.push(item);
-    });
+      const latest = allItems[0];
+      const repackItems = allItems.filter(i => i.parent_id != null || (i.note && (i.note.toLowerCase().includes('repack') || i.note.toLowerCase().includes('check'))));
 
-    const result: SessionGroup[] = [];
-    groupMap.forEach((items, rootId) => {
-      // Sort DESC (Mới nhất lên đầu)
-      items.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+      const totalSteps = allItems.length;
+      const repackCount = repackItems.length;
+      let realCount = totalSteps - repackCount;
+      if (realCount < 0) realCount = 0;
 
-      const latest = items[0];
-      const oldest = items[items.length - 1];
-      const isManual = latest.code.startsWith('DH-');
-
-      const timelineSteps: TimelineStep[] = items.map((item, index) => {
-        const previousStep = items[index + 1];
-        let isCodeChanged = false;
-        if (previousStep && item.code !== previousStep.code) isCodeChanged = true;
-
+      const steps: TimelineStep[] = allItems.map((item, idx) => {
+        const olderItem = allItems[idx + 1];
+        const isCodeChanged = olderItem && item.code !== olderItem.code;
+        const d = new Date(item.created_at);
         return {
           data: item,
-          isCodeChanged: isCodeChanged,
-          timeStr: new Date(item.created_at).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
+          isCodeChanged: !!isCodeChanged,
+          timeStr: d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
+          fullDateTimeStr: d.toLocaleString('vi-VN')
         };
       });
 
       const dateObj = new Date(latest.created_at);
-      const dateLabel = dateObj.toLocaleDateString('vi-VN', { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric' });
-
-      let durationStr = 'Vài giây';
-      if (items.length > 1) {
-          const start = new Date(oldest.start_at || oldest.created_at).getTime();
-          const end = new Date(latest.closed_at || latest.created_at).getTime();
-          const min = Math.floor((end - start) / 60000);
-          durationStr = min > 0 ? `${min} phút` : 'Wait...';
-      }
-
-      // Giữ trạng thái expand cũ nếu có (để khi load more không bị đóng lại các cái đang xem)
-      // Tuy nhiên logic đơn giản nhất là: Mới tạo thì đóng (false).
-      result.push({
-        rootId: rootId,
-        dateLabel: dateLabel,
+      return {
+        stt: index + 1,
+        rootId: Number(latest.id),
+        dateLabel: dateObj.toLocaleDateString('vi-VN', { weekday: 'short', day: '2-digit', month: '2-digit' }),
+        timeLabel: dateObj.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
         latestOrder: latest,
-        steps: timelineSteps,
-        totalSteps: items.length,
-        durationStr: durationStr,
-        isManual: isManual,
-        isExpanded: false // Mặc định thu gọn
-      });
+        steps: steps,
+        totalSteps,
+        repackCount,
+        realCount,
+        durationStr: '',
+        isExpanded: false
+      };
     });
-
-    // Sort Groups theo thời gian mới nhất
-    result.sort((a, b) => new Date(b.latestOrder.created_at).getTime() - new Date(a.latestOrder.created_at).getTime());
-
-    return result;
   }
 
-  // --- INFINITE SCROLL ---
   private setupInfiniteScroll() {
-    // Tạo một Observer để theo dõi phần tử "Sentinel" ở cuối danh sách
-    const options = {
-      root: null, // viewport
-      rootMargin: '100px', // Load trước khi cuộn tới đáy 100px
-      threshold: 0.1
-    };
-
+    const options = { root: null, rootMargin: '100px', threshold: 0.1 };
     this.scrollObserver = new IntersectionObserver((entries) => {
       const target = entries[0];
       if (target.isIntersecting && !this.isLoadingMore && this.hasMoreData) {
@@ -155,23 +139,34 @@ export class OrderHistoryComponent implements OnChanges, AfterViewInit, OnDestro
       }
     }, options);
 
-    // Tìm phần tử sentinel trong DOM
-    const sentinel = document.getElementById('scroll-sentinel');
-    if (sentinel) this.scrollObserver.observe(sentinel);
+    setTimeout(() => {
+        const sentinel = document.getElementById('scroll-sentinel');
+        if (sentinel) this.scrollObserver?.observe(sentinel);
+    }, 500);
   }
 
-  // --- ACTIONS ---
   toggleExpand(group: SessionGroup, event: Event) {
-    event.stopPropagation(); // Tránh click nhầm nút khác
-    group.isExpanded = !group.isExpanded;
+    event.stopPropagation();
+    const wasExpanded = group.isExpanded;
+
+    this.sessionGroups.update(groups => {
+        groups.forEach(g => { if (g.rootId !== group.rootId) g.isExpanded = false; });
+        return [...groups];
+    });
+
+    group.isExpanded = !wasExpanded;
+
+    if (group.isExpanded) {
+        setTimeout(() => {
+            const element = (event.target as HTMLElement).closest('.history-card');
+            if (element) element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 300);
+    }
   }
 
-  viewDetail(order: any) {
-    // [CẬP NHẬT QUAN TRỌNG]: Truyền thêm playId vào queryParams
-    // Để trang Detail biết cần play video của đơn hàng nào (Cha hay Con)
-    this.router.navigate(['/order-detail', order.code], {
-      queryParams: { playId: order.id }
-    });
+  viewDetail(order: any, rootCode?: string) {
+    const codeToFetch = rootCode || order.code;
+    this.router.navigate(['/order-detail', codeToFetch], { queryParams: { playId: order.id } });
   }
 
   getAvatar(path: string): string {

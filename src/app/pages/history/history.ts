@@ -1,11 +1,8 @@
 import { Component, signal, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 
-// Components
 import { OrderSearchComponent } from '../../components/order-search.component/order-search.component';
 import { OrderHistoryComponent } from '../../components/order-history.component/order-history.component';
-
-// Services
 import { OrderService } from '../../core/services/order.service';
 
 @Component({
@@ -22,93 +19,73 @@ import { OrderService } from '../../core/services/order.service';
 export class History {
   private orderService = inject(OrderService);
 
-  // --- STATE DỮ LIỆU ---
-  orders = signal<any[]>([]); // Danh sách đơn hàng hiển thị (Tích lũy)
+  orders = signal<any[]>([]);
 
-  // --- STATE PHÂN TRANG ---
+  // Biến lưu tổng số lượng đơn hàng (chính xác)
+  totalRecords = signal<number>(0);
+
   currentPage = 0;
-  pageSize = 20;        // Số lượng group/item load mỗi lần
-  currentParams: any = {}; // Lưu lại bộ lọc hiện tại (code, date...) để dùng khi load more
+  pageSize = 20;
+  currentParams: any = {};
 
-  // --- STATE TRẠNG THÁI ---
-  isLoading = signal<boolean>(false);     // Loading quay giữa màn hình (lần đầu)
-  isLoadingMore = signal<boolean>(false); // Loading quay ở dưới đáy (khi cuộn)
-  hasMoreData = signal<boolean>(true);    // Còn dữ liệu để load nữa không?
-  hasSearched = signal<boolean>(false);   // Đã thực hiện tìm kiếm chưa?
+  isLoading = signal<boolean>(false);
+  isLoadingMore = signal<boolean>(false);
+  hasMoreData = signal<boolean>(true);
+  hasSearched = signal<boolean>(false);
 
   ngOnInit() {}
 
-  /**
-   * 1. XỬ LÝ SỰ KIỆN TÌM KIẾM (Từ OrderSearchComponent)
-   * Reset toàn bộ state về ban đầu và gọi API trang 0.
-   */
   filterChange(params: any) {
-    this.currentParams = { ...params }; // Lưu params
-
-    // Reset state
+    this.currentParams = { ...params };
     this.currentPage = 0;
     this.orders.set([]);
     this.hasMoreData.set(true);
     this.hasSearched.set(true);
     this.isLoading.set(true);
+    this.totalRecords.set(0);
 
-    // Gọi API load mới
     this.fetchData(false);
   }
 
-  /**
-   * 2. XỬ LÝ SỰ KIỆN LOAD MORE (Từ OrderHistoryComponent bắn lên)
-   * Tăng page lên 1 và gọi API nối thêm dữ liệu.
-   */
   onLoadMore() {
-    // Chặn nếu đang load, hoặc hết data, hoặc chưa tìm kiếm
     if (this.isLoadingMore() || !this.hasMoreData() || this.isLoading()) return;
-
     this.currentPage++;
     this.isLoadingMore.set(true);
-
-    // Gọi API nối đuôi
     this.fetchData(true);
   }
 
-  /**
-   * 3. HÀM GỌI API CHUNG
-   * @param isAppend: True = Nối thêm (Load More), False = Gán mới (Search)
-   */
   private fetchData(isAppend: boolean = false) {
-    // Chuẩn bị tham số gửi xuống Service
-    // FIX: Backend thường dùng page bắt đầu từ 1, currentPage bắt đầu từ 0 nên cần +1
     const apiParams = {
         ...this.currentParams,
-        page: this.currentPage + 1,
+        page: this.currentPage,
         page_size: this.pageSize
     };
 
     this.orderService.getOrders(apiParams).subscribe({
       next: (res: any) => {
-        // FIX: Lấy mảng data từ res.data.items theo đúng cấu trúc JSON backend trả về
         const responseData = res.data || {};
         const newData = responseData.items || [];
 
-        // Kiểm tra nếu dữ liệu trả về ít hơn pageSize -> Đã hết dữ liệu
-        // (Hoặc có thể so sánh responseData.total với orders().length nếu muốn chính xác hơn)
+        // [FIX CHÍNH XÁC] Lấy 'total' từ API. Field này đếm số đơn hàng (items).
+        // Nếu API backend chưa trả về field 'total', nó sẽ lấy newData.length (cho trang đầu).
+        const total = responseData.total !== undefined ? responseData.total : newData.length;
+
         if (newData.length < this.pageSize) {
             this.hasMoreData.set(false);
         }
 
         if (isAppend) {
-            // Trường hợp Load More: Nối vào danh sách cũ
             this.orders.update(oldOrders => [...oldOrders, ...newData]);
             this.isLoadingMore.set(false);
         } else {
-            // Trường hợp Search mới: Gán đè hoàn toàn
             this.orders.set(newData);
+            // Cập nhật tổng số đơn hàng vào Badge
+            this.totalRecords.set(newData.length||0);
             this.isLoading.set(false);
         }
       },
       error: (err) => {
         console.error('History API Error:', err);
-        // Xử lý lỗi: Tắt loading
         this.isLoading.set(false);
         this.isLoadingMore.set(false);
       }

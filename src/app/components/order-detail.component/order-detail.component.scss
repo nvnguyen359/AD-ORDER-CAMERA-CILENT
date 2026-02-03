@@ -1,7 +1,7 @@
 :host {
     display: block;
-    height: 100vh; /* [FIX] Ép chiều cao component bằng đúng màn hình */
-    overflow: hidden; /* [FIX] Cắt bỏ phần thừa, không cho scroll body */
+    height: 100vh; /* Ép chiều cao component bằng đúng màn hình */
+    overflow: hidden; /* Cắt bỏ phần thừa, không cho scroll body */
 }
 
 .detail-wrapper {
@@ -30,19 +30,13 @@
 }
 
 .list-xxx {
-    /* [FIX] Bỏ chiều cao cứng 60vh để nó tự co giãn theo flex */
-    /* height: 60vh; */
     flex-grow: 1;
 }
 
-/* --- [FIX] VIDEO AREA --- */
+/* --- VIDEO AREA --- */
 .video-area {
-    /* Quan trọng: Flex 1 để chiếm toàn bộ khoảng trống còn lại */
     flex: 1 1 auto;
-
-    /* Quan trọng: min-height: 0 để cho phép co nhỏ lại khi màn hình thấp */
-    min-height: 0;
-
+    min-height: 0; /* Cho phép co nhỏ */
     width: 100%;
     background-color: #000;
     position: relative;
@@ -55,7 +49,6 @@
         outline: none;
         width: 100%;
         height: 100%;
-        /* Đảm bảo video luôn nằm gọn trong khung, không bị méo */
         object-fit: contain;
     }
 }
@@ -65,7 +58,6 @@
     background-color: #ffffff;
     box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
     z-index: 2;
-    /* Flex-none để không bị co giãn */
     flex: 0 0 auto;
 }
 
@@ -74,10 +66,8 @@
     background-color: #f1f5f9;
     box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.06);
     white-space: nowrap;
-
-    /* Cố định chiều cao timeline hoặc cho phép nó co giãn nhẹ */
     flex: 0 0 auto;
-    max-height: 150px; /* Giới hạn chiều cao timeline */
+    max-height: 150px;
     overflow-y: auto;
 }
 
@@ -129,10 +119,6 @@
 }
 
 /* --- Animations --- */
-.rotate-90 {
-    transform: rotate(90deg);
-}
-
 .playing-bars {
     height: 12px;
     display: flex;
@@ -155,40 +141,59 @@
     100% { height: 100%; opacity: 1; }
 }
 
-/* --- Responsive --- */
+/* --- RESPONSIVE MOBILE FIX --- */
 @media (max-width: 991px) {
-    /* Mobile thì cho phép scroll dọc toàn trang */
+    /* 1. Giữ nguyên chiều cao 100vh để không bị scroll body */
     :host {
-        height: auto;
-        overflow: auto;
+        height: 100vh !important;
+        overflow: hidden !important;
     }
 
     .detail-wrapper {
-        overflow-y: visible !important;
+        overflow-y: hidden !important;
     }
 
+    /* 2. Layout dọc: Video trên, List dưới */
     .flex-grow-1.lg\:flex-row {
         flex-direction: column !important;
+        height: 100%; /* Chiếm hết chiều cao còn lại sau header */
+        overflow: hidden;
     }
 
-    /* Mobile: Video fix cứng chiều cao để dễ nhìn */
+    /* 3. Khu vực Video: Cố định khoảng 35-40% màn hình */
     .video-area {
-        height: 40vh !important;
-        min-height: 250px;
-        flex: 0 0 auto; /* Không co giãn trên mobile */
+        height: 35vh !important;
+        min-height: 200px;
+        flex: 0 0 auto !important; /* Không co giãn */
     }
 
+    /* Container bên trái (chứa video + timeline) */
     .lg\:w-9 {
         width: 100% !important;
-        flex: none !important;
+        flex: 0 0 auto !important; /* Không co giãn */
+        height: auto !important;
+        display: flex;
+        flex-direction: column;
     }
 
+    /* 4. Khu vực List (Sidebar): Chiếm phần còn lại và SCROLL */
     .lg\:w-3 {
         width: 100% !important;
+
+        /* Flex grow 1: Chiếm toàn bộ khoảng trắng còn lại bên dưới video */
+        flex: 1 1 auto !important;
+
+        /* Min-height 0: Quan trọng để scrollbar hoạt động bên trong flex item */
+        min-height: 0 !important;
         height: auto !important;
-        min-height: 400px; /* Chiều cao tối thiểu cho list bên dưới */
+
         border-left: none !important;
         border-top: 1px solid #e2e8f0;
+
+        /* Thiết lập flex column để header list đứng yên, item list scroll */
+        display: flex !important;
+        flex-direction: column !important;
+        overflow: hidden !important;
     }
 }
 

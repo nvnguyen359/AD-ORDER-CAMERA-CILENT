@@ -1,38 +1,26 @@
-import {
-  Component,
-  EventEmitter,
-  Output,
-  inject,
-  signal,
-  computed,
-  ViewEncapsulation,
-  input,
-} from '@angular/core';
+import { Component, EventEmitter, Output, inject, signal, computed, ViewEncapsulation, input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 
-// PrimeNG Imports
 import { ToolbarModule } from 'primeng/toolbar';
 import { InputGroupModule } from 'primeng/inputgroup';
 import { InputGroupAddonModule } from 'primeng/inputgroupaddon';
-import {
-  AutoCompleteModule,
-  AutoCompleteCompleteEvent,
-  AutoCompleteSelectEvent,
-} from 'primeng/autocomplete';
+import { AutoCompleteModule, AutoCompleteCompleteEvent, AutoCompleteSelectEvent } from 'primeng/autocomplete';
 import { ButtonModule } from 'primeng/button';
 import { DatePickerModule } from 'primeng/datepicker';
 import { MenuModule } from 'primeng/menu';
 import { ChipModule } from 'primeng/chip';
 import { TooltipModule } from 'primeng/tooltip';
+import { BadgeModule } from 'primeng/badge';
+import { DialogModule } from 'primeng/dialog';
 import { MenuItem } from 'primeng/api';
 
-// App Imports
 import { OrderService } from '../../core/services/order.service';
 import { Order } from '../../core/models/order.model';
 import { environment } from '../../environments/environment';
 import { QrScanDialogComponent } from '../qr-scan-dialog.component/qr-scan-dialog.component';
+import { OrderDetailComponent } from '../order-detail.component/order-detail.component';
 
 export interface FilterState {
   code?: string;
@@ -46,45 +34,39 @@ export interface FilterState {
   selector: 'app-order-search',
   standalone: true,
   imports: [
-    CommonModule,
-    FormsModule,
-    ToolbarModule,
-    InputGroupModule,
-    InputGroupAddonModule,
-    AutoCompleteModule,
-    ButtonModule,
-    DatePickerModule,
-    MenuModule,
-    ChipModule,
-    TooltipModule,
-    QrScanDialogComponent,
+    CommonModule, FormsModule, ToolbarModule, InputGroupModule, InputGroupAddonModule,
+    AutoCompleteModule, ButtonModule, DatePickerModule, MenuModule, ChipModule,
+    TooltipModule, BadgeModule, DialogModule, QrScanDialogComponent, OrderDetailComponent,
   ],
   templateUrl: './order-search.component.html',
   styleUrls: ['./order-search.component.scss'],
-  encapsulation: ViewEncapsulation.None, // Quan trọng: Để CSS highlight apply được vào innerHTML
+  encapsulation: ViewEncapsulation.None,
 })
 export class OrderSearchComponent {
   private orderService = inject(OrderService);
   private sanitizer = inject(DomSanitizer);
 
-  // --- OUTPUTS ---
   @Output() filterChange = new EventEmitter<FilterState>();
   @Output() openQrScanner = new EventEmitter<void>();
   isShowFilter = input<boolean>(true);
 
-  // --- SIGNALS & STATE ---
+  // [QUAN TRỌNG] Nhận tổng số đơn từ component Cha (History)
+  badgeValue = input<number>(0);
+  showDateDialog = false;
+  // --- SIGNALS ---
   suggestions = signal<Order[]>([]);
   activePreset = signal<string>('today');
-  // State điều khiển hiển thị Dialog
-  showQrDialog = false;
-  // Lưu từ khóa để highlight
   searchKeyword = signal<string>('');
 
-  // Models
+  // State Badge tìm kiếm
+  totalOrders = signal<number>(0);
+
+  showQrDialog = false;
+  showDetailDialog = false;
+  foundOrderCode: string | null = null;
   selectedCode: string | null = null;
   rangeDates: Date[] | undefined;
 
-  // Configuration
   readonly presets = [
     { label: 'Hôm nay', value: 'today' },
     { label: 'Hôm qua', value: 'yesterday' },
@@ -92,8 +74,7 @@ export class OrderSearchComponent {
     { label: '15 ngày qua', value: 'last15days' },
   ];
 
-  // --- COMPUTED MENU (MOBILE) ---
-  menuItems = computed<MenuItem[]>(() => {
+menuItems = computed<MenuItem[]>(() => {
     const active = this.activePreset();
     return [
       ...this.presets.map((p) => ({
@@ -102,10 +83,13 @@ export class OrderSearchComponent {
         command: () => this.selectPreset(p.value),
       })),
       { separator: true },
-      {
-        label: 'Tùy chọn ngày',
+      // [CẬP NHẬT] Bỏ disabled và thêm command mở dialog
+      { 
+        label: 'Tùy chọn ngày', 
         icon: active === 'custom' ? 'pi pi-check text-primary' : 'pi pi-calendar-plus',
-        disabled: true,
+        command: () => {
+          this.showDateDialog = true;
+        }
       },
     ];
   });
@@ -114,110 +98,89 @@ export class OrderSearchComponent {
     setTimeout(() => this.emitCurrentState(), 0);
   }
 
-  // ==========================================
-  // 1. LOGIC TÌM KIẾM (DEDUPLICATE + ACCENT + HIGHLIGHT)
-  // ==========================================
-
-  // Hàm chuyển tiếng Việt có dấu -> không dấu
+  // --- LOGIC SEARCH & HIGHLIGHT ---
   removeAccents(str: string): string {
     if (!str) return '';
-    return str
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .replace(/đ/g, 'd')
-      .replace(/Đ/g, 'D')
-      .toLowerCase();
+    return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').toLowerCase();
   }
 
-  // Hàm tạo HTML highlight từ khóa
   highlightText(text: string | undefined): SafeHtml {
     if (!text) return '';
     const query = this.searchKeyword().trim();
-
-    // Nếu không có từ khóa hoặc từ khóa rỗng, trả về text gốc (đã sanitize nhẹ)
     if (!query) return text;
-
     const pattern = new RegExp(`(${query})`, 'gi');
-    const highlighted = text.replace(pattern, '<span class="highlight-match">$1</span>');
-
-    return this.sanitizer.bypassSecurityTrustHtml(highlighted);
+    return this.sanitizer.bypassSecurityTrustHtml(text.replace(pattern, '<span class="highlight-match">$1</span>'));
   }
 
   searchOrders(event: AutoCompleteCompleteEvent) {
     const query = event.query;
-    this.searchKeyword.set(query); // Lưu keyword highlight
-
+    this.searchKeyword.set(query);
     const normalizedQuery = this.removeAccents(query);
-
-    this.orderService
-      .getOrders({
-        page: 0,
-        pageSize: 50, // Lấy rộng ra để lọc client-side
-        code: query,
-      })
-      .subscribe({
-        next: (res: any) => { // [FIX] Ép kiểu res thành any để tránh lỗi TS strict
-          // [FIX] Xử lý cấu trúc dữ liệu mới: { items: [...] } hoặc mảng cũ [...]
-          const responseData: any = res.data || {}; // [FIX] Ép kiểu any cho biến trung gian
-          let rawData: Order[] = [];
-
-          if (Array.isArray(responseData)) {
-            rawData = responseData;
-          } else if (responseData.items && Array.isArray(responseData.items)) {
-            rawData = responseData.items;
-          }
-
-          // B1: Lọc trùng mã (Deduplicate)
-          let uniqueOrders = Array.from(new Map(rawData.map((item) => [item.code, item])).values());
-
-          // B2: Lọc Tiếng Việt không dấu (Client-side)
-          if (normalizedQuery) {
-            uniqueOrders = uniqueOrders.filter((order) => {
-              const normalizedCode = this.removeAccents(order.code);
-              const normalizedPacker = this.removeAccents(order.packer_name || '');
-
-              return (
-                normalizedCode.includes(normalizedQuery) ||
-                normalizedPacker.includes(normalizedQuery)
-              );
-            });
-          }
-
-          // Cắt lấy 10 kết quả hiển thị
-          this.suggestions.set(uniqueOrders.slice(0, 10));
+    this.orderService.getOrders({ page: 0, pageSize: 50, code: query }).subscribe({
+        next: (res: any) => {
+            const responseData: any = res.data || {};
+            let rawData: Order[] = [];
+            if (Array.isArray(responseData)) { rawData = responseData; }
+            else if (responseData.items && Array.isArray(responseData.items)) { rawData = responseData.items; }
+            let uniqueOrders = Array.from(new Map(rawData.map((item) => [item.code, item])).values());
+            if (normalizedQuery) {
+                uniqueOrders = uniqueOrders.filter((order) => {
+                    const normalizedCode = this.removeAccents(order.code);
+                    const normalizedPacker = this.removeAccents(order.packer_name || '');
+                    return normalizedCode.includes(normalizedQuery) || normalizedPacker.includes(normalizedQuery);
+                });
+            }
+            this.suggestions.set(uniqueOrders.slice(0, 10));
         },
         error: () => this.suggestions.set([]),
-      });
+    });
   }
 
-  // ==========================================
-  // 2. LOGIC CHỌN & XỬ LÝ
-  // ==========================================
   onOrderSelect(event: AutoCompleteSelectEvent) {
     const selectedItem = event.value as Order;
-    // Ép kiểu về String cho Model
     this.selectedCode = selectedItem.code;
-
-    // Xử lý logic
     this.handleSelect(this.selectedCode);
+    this.calculateTotalOrders(this.selectedCode);
   }
 
   handleSelect(code: string) {
-    console.log('Selected:', code);
     this.emitWithOverride({ code: code });
   }
 
   onClearSearch() {
     this.selectedCode = null;
     this.searchKeyword.set('');
+    this.totalOrders.set(0);
     this.emitWithOverride({ code: undefined });
   }
 
-  // ==========================================
-  // 3. LOGIC DATE FILTER
-  // ==========================================
+  // Tính tổng đơn tìm kiếm (Gốc + Repack)
+  calculateTotalOrders(code: string) {
+    if (!code) return;
+    this.orderService.getOrders({ code: code, page: 0, pageSize: 100 }).subscribe({
+      next: (res: any) => {
+        const responseData = res.data || {};
+
+        let items: any[] = [];
+        if (Array.isArray(responseData)) { items = responseData; }
+        else if (responseData.items && Array.isArray(responseData.items)) { items = responseData.items; }
+
+        if (items.length > 0) {
+            let count = 0;
+            items.forEach(item => {
+                count++;
+                if (item.history_logs && Array.isArray(item.history_logs)) { count += item.history_logs.length; }
+            });
+            this.totalOrders.set(count);
+
+            this.foundOrderCode = code;
+        } else { this.totalOrders.set(0); }
+      },
+      error: () => this.totalOrders.set(0)
+    });
+  }
+
   selectPreset(value: string) {
-    console.log(value);
     this.activePreset.set(value);
     this.rangeDates = undefined;
     this.emitCurrentState();
@@ -230,14 +193,9 @@ export class OrderSearchComponent {
     }
   }
 
-  // ==========================================
-  // 4. HELPERS
-  // ==========================================
   getFullUrl(path?: string): string {
     if (!path) return '';
-    const baseUrl = environment.apiUrl.endsWith('/')
-      ? environment.apiUrl.slice(0, -1)
-      : environment.apiUrl;
+    const baseUrl = environment.apiUrl.endsWith('/') ? environment.apiUrl.slice(0, -1) : environment.apiUrl;
     const relativePath = path.startsWith('/') ? path : `/${path}`;
     return `${baseUrl}${relativePath}`;
   }
@@ -246,13 +204,8 @@ export class OrderSearchComponent {
     const code = this.selectedCode || undefined;
     const preset = this.activePreset();
     let dateParams: any = { date_preset: preset };
-
     if (preset === 'custom' && this.rangeDates) {
-      dateParams = {
-        date_preset: undefined,
-        start_date: this.rangeDates[0],
-        end_date: this.rangeDates[1] || this.rangeDates[0],
-      };
+      dateParams = { date_preset: undefined, start_date: this.rangeDates[0], end_date: this.rangeDates[1] || this.rangeDates[0] };
     }
     this.filterChange.emit({ code, ...dateParams });
   }
@@ -261,26 +214,15 @@ export class OrderSearchComponent {
     const preset = this.activePreset();
     let dateParams: any = { date_preset: preset };
     if (preset === 'custom' && this.rangeDates) {
-      dateParams = {
-        date_preset: undefined,
-        start_date: this.rangeDates[0],
-        end_date: this.rangeDates[1] || this.rangeDates[0],
-      };
+      dateParams = { date_preset: undefined, start_date: this.rangeDates[0], end_date: this.rangeDates[1] || this.rangeDates[0] };
     }
     this.filterChange.emit({ ...dateParams, ...override });
   }
 
-  // Hàm xử lý khi quét thành công
   onQrScanSuccess(code: string) {
-    console.log('Quét thành công:', code);
-
-    // 1. Điền vào ô input
     this.selectedCode = code;
-
-    // 2. Gọi hàm handleSelect để tìm kiếm ngay
     this.handleSelect(code);
-
-    // Dialog tự đóng do logic bên trong QrScanDialogComponent
-    // hoặc bạn set this.showQrDialog = false ở đây cho chắc chắn.
+    this.calculateTotalOrders(code);
+    this.showQrDialog = false;
   }
 }

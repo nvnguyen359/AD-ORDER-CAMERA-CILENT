@@ -1,57 +1,151 @@
-<div class="grid p-4" *ngIf="stats() as s">
-    <div class="col-12 md:col-6 lg:col-4">
-        <p-card header="CPU" class="text-center h-full shadow-2">
-            <p-knob [(ngModel)]="s.cpu_overall" [readonly]="true" valueTemplate="{value}%" 
-                    valueColor="var(--p-primary-color)" [size]="150"></p-knob>
-        </p-card>
+<div *ngIf="displayMode === 'widget' && stats() as s"
+     class="sys-widget flex gap-3 px-3 py-2 border-round cursor-pointer transition-colors {{ containerClass }}"
+     [class.flex-column]="layout === 'column'"
+     [class.align-items-start]="layout === 'column'"
+     [class.align-items-center]="layout !== 'column'"
+     (click)="openDetail()"
+     pTooltip="Click xem chi tiết" [tooltipPosition]="layout === 'column' ? 'right' : 'bottom'">
+     <ng-container *ngTemplateOutlet="miniStats; context: {$implicit: s}"></ng-container>
+</div>
+
+<div *ngIf="displayMode === 'floating' && !showDetailDialog && stats() as s"
+     class="sys-floating-container">
+
+    <div *ngIf="isFloatingExpanded"
+         class="sys-floating-content shadow-4 border-round-xl bg-white mb-2 p-2 animation-duration-200 fadeinup"
+         (click)="openDetail()">
+
+         <div class="flex justify-content-between align-items-center mb-2 pb-2 border-bottom-1 surface-border px-1"
+              (click)="openDetail(); $event.stopPropagation()">
+             <span class="text-[10px] font-bold text-500 ">System Stats</span>
+             <i class="pi pi-external-link text-[10px] text-primary cursor-pointer hover:font-bold"></i>
+         </div>
+
+         <div class="flex gap-2"
+              [class.flex-column]="layout === 'column'"
+              [class.align-items-start]="layout === 'column'"
+              [class.align-items-center]="layout !== 'column'">
+            <ng-container *ngTemplateOutlet="miniStats; context: {$implicit: s}"></ng-container>
+         </div>
     </div>
 
-    <div class="col-12 md:col-6 lg:col-4">
-        <p-card header="RAM" class="text-center h-full shadow-2">
-            <p-knob [(ngModel)]="s.ram_percent" [readonly]="true" valueTemplate="{value}%" 
-                    valueColor="#34d399" [size]="150"></p-knob>
-            <div class="mt-3 text-2xl font-bold text-primary">
-                {{ formatRAM(s.ram_used_mb) }} GB
-            </div>
-            <div class="text-500 text-sm uppercase">Đã sử dụng</div>
-        </p-card>
-    </div>
+    <div class="sys-fab shadow-4 cursor-pointer flex align-items-center justify-content-center transition-colors transition-duration-300 text-white"
+         [ngClass]="isFloatingExpanded ? 'bg-primary' : getTempBgClass(s.temp_c)"
+         (click)="toggleFloating($event)"
+         [pTooltip]="s.temp_c > 75 ? 'Cảnh báo nhiệt độ cao!' : 'Nhiệt độ hệ thống'"
+         tooltipPosition="left">
 
-    <div class="col-12 lg:col-4">
-        <p-card header="System Health" class="h-full shadow-2">
-            <div class="flex flex-column gap-4">
-                
-                <div class="field-progress">
-                    <div class="flex justify-content-between mb-2 align-items-center">
-                        <span class="font-bold"><i class="pi pi-bolt mr-2 text-orange-500"></i>Nhiệt độ</span>
-                        <p-tag [value]="s.temp_c > 0 ? s.temp_c + '°C' : 'N/A'" 
-                               [severity]="getTempSeverity(s.temp_c)"></p-tag>
-                    </div>
-                    <p-progressBar [value]="s.temp_c" [showValue]="false" 
-                                   [style]="{'height': '8px'}"
-                                   [color]="s.temp_c > 70 ? '#ef4444' : '#f59e0b'"></p-progressBar>
-                </div>
-
-                <div class="field-progress">
-                    <div class="flex justify-content-between mb-2">
-                        <span class="font-bold"><i class="pi pi-save mr-2 text-blue-500"></i>Ổ cứng (Trống {{s.disk_free_gb}} GB)</span>
-                        <span>{{s.disk_percent}}%</span>
-                    </div>
-                    <p-progressBar [value]="s.disk_percent" [showValue]="false" 
-                                   [style]="{'height': '8px'}" severity="info"></p-progressBar>
-                </div>
-
-                <div class="grid mt-2 border-top-1 surface-border pt-3">
-                    <div class="col-6">
-                        <div class="text-500 text-xs font-bold uppercase">Cams Online</div>
-                        <div class="font-bold text-xl text-green-500">{{ s.active_cams }}</div>
-                    </div>
-                    <div class="col-6">
-                        <div class="text-500 text-xs font-bold uppercase">Uptime</div>
-                        <div class="font-bold text-lg text-primary">{{ formatUptime(s.uptime) }}</div>
-                    </div>
-                </div>
-            </div>
-        </p-card>
+         <i *ngIf="isFloatingExpanded" class="pi pi-times text-xl"></i>
+         <span *ngIf="!isFloatingExpanded" class="font-bold text-sm" style="letter-spacing: -0.5px;">
+            {{ s.temp_c }}°
+         </span>
     </div>
 </div>
+
+<div *ngIf="displayMode === 'simple' && stats() as s"
+     class="flex align-items-center gap-3 text-xs opacity-80 hover:opacity-100 cursor-pointer transition-opacity {{ containerClass }}"
+     (click)="openDetail()">
+    <span><i class="pi pi-server mr-1"></i>CPU: {{s.cpu_overall}}%</span>
+    <span><i class="pi pi-database mr-1"></i>RAM: {{ formatRAM(s.ram_used_mb) }}GB</span>
+    <span [ngClass]="getTempColorClass(s.temp_c)">
+        <i class="pi pi-bolt mr-1"></i>{{s.temp_c}}°C
+    </span>
+</div>
+
+<div *ngIf="displayMode === 'full'">
+    <ng-container *ngTemplateOutlet="fullContent"></ng-container>
+</div>
+
+<ng-template #miniStats let-s>
+    <div class="flex align-items-center gap-2 w-full px-1">
+        <div class="w-1rem flex justify-content-center">
+            <i class="pi pi-server text-sm" [ngClass]="s.cpu_overall > 80 ? 'text-red-500' : 'text-gray-500'"></i>
+        </div>
+        <div class="flex flex-column" style="line-height: 1.1;">
+            <span class="text-[10px] opacity-70 font-bold">CPU</span>
+            <span class="text-sm font-bold">{{s.cpu_overall}}%</span>
+        </div>
+    </div>
+
+    <div [class]="layout === 'column' ? 'w-full h-1px bg-gray-200' : 'w-1px h-1rem bg-gray-200'"></div>
+
+    <div class="flex align-items-center gap-2 w-full px-1">
+        <div class="w-1rem flex justify-content-center">
+            <i class="pi pi-database text-sm" [ngClass]="s.ram_percent > 79 ? 'text-orange-500' : 'text-gray-500'"></i>
+        </div>
+        <div class="flex flex-column" style="line-height: 1.1;">
+            <span class="text-[10px] opacity-70 font-bold">RAM</span>
+            <span class="text-sm font-bold">{{s.ram_percent}}%</span>
+        </div>
+    </div>
+
+    <div [class]="layout === 'column' ? 'w-full h-1px bg-gray-200' : 'w-1px h-1rem bg-gray-200'"></div>
+
+    <div class="flex align-items-center gap-2 w-full px-1">
+        <div class="w-1rem flex justify-content-center">
+            <i class="pi pi-bolt text-sm" [ngClass]="getTempColorClass(s.temp_c)"></i>
+        </div>
+        <div class="flex flex-column" style="line-height: 1.1;">
+            <span class="text-[10px] opacity-70 font-bold">Temp</span>
+            <span class="text-sm font-bold" [ngClass]="getTempColorClass(s.temp_c)">
+                {{s.temp_c}}°C
+            </span>
+        </div>
+    </div>
+</ng-template>
+
+<p-dialog header="Chi Tiết Hệ Thống" [(visible)]="showDetailDialog"
+          [modal]="true" [style]="{width: '90vw', maxWidth: '1000px'}"
+          [draggable]="false" [resizable]="false" [dismissableMask]="true">
+    <ng-container *ngTemplateOutlet="fullContent"></ng-container>
+</p-dialog>
+
+<ng-template #fullContent>
+    <div class="grid p-2" *ngIf="stats() as s">
+        <div class="col-12 md:col-6 lg:col-4">
+            <p-card header="CPU" class="text-center h-full shadow-1 surface-card">
+                <p-knob [(ngModel)]="s.cpu_overall" [readonly]="true" valueTemplate="{value}%"
+                        valueColor="var(--primary-color)" [size]="150" [strokeWidth]="10"></p-knob>
+            </p-card>
+        </div>
+        <div class="col-12 md:col-6 lg:col-4">
+            <p-card header="RAM" class="text-center h-full shadow-1 surface-card">
+                <p-knob [(ngModel)]="s.ram_percent" [readonly]="true" valueTemplate="{value}%"
+                        valueColor="#34d399" [size]="150" [strokeWidth]="10"></p-knob>
+                <div class="mt-3 text-2xl font-bold text-primary">{{ formatRAM(s.ram_used_mb) }} GB</div>
+            </p-card>
+        </div>
+        <div class="col-12 lg:col-4">
+            <p-card header="System Health" class="h-full shadow-1 surface-card">
+                <div class="flex flex-column gap-4">
+                    <div class="field-progress">
+                        <div class="flex justify-content-between mb-2 align-items-center">
+                            <span class="font-bold text-700"><i class="pi pi-bolt mr-2 text-orange-500"></i>Nhiệt độ</span>
+                            <p-tag [value]="s.temp_c + '°C'" [severity]="getTempSeverity(s.temp_c)"></p-tag>
+                        </div>
+                        <p-progressBar [value]="s.temp_c" [showValue]="false" [style]="{'height': '8px'}"
+                                       [color]="s.temp_c > 70 ? '#ef4444' : '#f59e0b'"></p-progressBar>
+                    </div>
+                    <div class="field-progress">
+                        <div class="flex justify-content-between mb-2">
+                            <span class="font-bold text-700"><i class="pi pi-save mr-2 text-blue-500"></i>Ổ cứng (Trống {{s.disk_free_gb}} GB)</span>
+                            <span>{{s.disk_percent}}%</span>
+                        </div>
+                        <p-progressBar [value]="s.disk_percent" [showValue]="false"
+                                       [style]="{'height': '8px'}" severity="info"></p-progressBar>
+                    </div>
+                     <div class="grid mt-2 border-top-1 surface-border pt-3">
+                        <div class="col-6 text-center border-right-1 surface-border">
+                            <div class="text-500 text-xs font-bold uppercase mb-1">Cams Online</div>
+                            <div class="font-bold text-2xl text-green-500">{{ s.active_cams }}</div>
+                        </div>
+                        <div class="col-6 text-center">
+                            <div class="text-500 text-xs font-bold uppercase mb-1">Uptime</div>
+                            <div class="font-bold text-xl text-primary">{{ formatUptime(s.uptime) }}</div>
+                        </div>
+                    </div>
+                </div>
+            </p-card>
+        </div>
+    </div>
+</ng-template>

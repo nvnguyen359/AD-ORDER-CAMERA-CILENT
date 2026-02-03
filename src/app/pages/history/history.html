@@ -1,6 +1,9 @@
 <div class="flex flex-column h-full">
 
-    <app-order-search (filterChange)="filterChange($event)"></app-order-search>
+    <app-order-search
+        (filterChange)="filterChange($event)"
+        [badgeValue]="totalRecords()">
+    </app-order-search>
 
     <div class="flex-grow-1 overflow-y-auto p-3 bg-gray-50 relative" id="history-scroll-container">
 
