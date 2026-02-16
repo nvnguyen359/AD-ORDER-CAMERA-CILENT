@@ -53,6 +53,17 @@
           </div>
 
           <div class="flex flex-col gap-2">
+             <label class="font-bold text-gray-700">Trợ lý Giọng nói (TTS)</label>
+             <div class="flex align-items-center gap-3">
+                <p-toggleswitch formControlName="enable_audio" (onChange)="saveSettings()"></p-toggleswitch>
+                <span class="text-gray-600 font-medium" [class.text-green-600]="settingForm.get('enable_audio')?.value">
+                   {{ settingForm.get('enable_audio')?.value ? 'Đang BẬT 🔊' : 'Đang TẮT 🔇' }}
+                </span>
+             </div>
+             <small class="text-gray-500">Tắt đi nếu chưa cài driver âm thanh để tránh lỗi.</small>
+          </div>
+
+          <div class="flex flex-col gap-2">
             <label class="font-bold text-gray-700">Độ nhạy AI (Confidence)</label>
             <p-select
               [options]="aiOptions"

@@ -82,7 +82,7 @@ export class MonitorComponent implements OnInit, OnDestroy {
   }
 
   loadCameras() {
-    this.cameraService.getAllCameras().subscribe((res: any) => {
+    this.cameraService.getAllCameras(false).subscribe((res: any) => {
       let rawData = [];
       if (Array.isArray(res.data)) rawData = res.data;
       else if (res.data && Array.isArray(res.data.items)) rawData = res.data.items;

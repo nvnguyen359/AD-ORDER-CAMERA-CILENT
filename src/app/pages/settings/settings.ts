@@ -6,7 +6,9 @@ import { ToastModule } from 'primeng/toast';
 import { CardModule } from 'primeng/card';
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
-import { SelectModule } from 'primeng/select'; 
+import { SelectModule } from 'primeng/select';
+import { ToggleSwitchModule } from 'primeng/toggleswitch'; // <--- SỬA DÒNG NÀY
+
 import { SettingsService } from '../../core/services/settings.service';
 
 @Component({
@@ -19,7 +21,8 @@ import { SettingsService } from '../../core/services/settings.service';
     CardModule,
     ButtonModule,
     InputTextModule,
-    SelectModule
+    SelectModule,
+    ToggleSwitchModule // <--- SỬA DÒNG NÀY (Thay cho InputSwitchModule)
   ],
   templateUrl: './settings.html',
   styleUrls: ['./settings.scss'],
@@ -34,7 +37,6 @@ export class SettingsComponent implements OnInit {
   cameras: any[] = [];
   isLoading = false;
 
-  // Cấu hình các tùy chọn hiển thị
   resolutions = [
     { label: '🚀 FWVGA (854 x 480) - Siêu mượt [Khuyên dùng Pi 3]', value: '854x480' },
     { label: 'HD (1280 x 720) - 16:9 [Tiêu chuẩn]', value: '1280x720' },
@@ -82,7 +84,8 @@ export class SettingsComponent implements OnInit {
       read_end_order: [5, Validators.required],
       perf_record_fps: [10.0, Validators.required],
       perf_view_fps: [15.0, Validators.required],
-      perf_ai_interval: [12, Validators.required]
+      perf_ai_interval: [12, Validators.required],
+      enable_audio: [false]
     });
   }
 
@@ -92,7 +95,6 @@ export class SettingsComponent implements OnInit {
 
   loadData() {
     this.isLoading = true;
-    // Load danh sách camera (nếu cần hiển thị thông tin bổ sung)
     this.settingsService.getCameras().subscribe({
         next: (cams) => this.cameras = cams,
         error: () => console.warn("Không tải được danh sách camera")
@@ -100,7 +102,6 @@ export class SettingsComponent implements OnInit {
 
     this.settingsService.getSettings().subscribe({
       next: (data: any) => {
-        // Xử lý logic hiển thị Resolution từ camera_width và camera_height
         const w = data['camera_width'] || 854;
         const h = data['camera_height'] || 480;
         const resKey = `${w}x${h}`;
@@ -110,7 +111,6 @@ export class SettingsComponent implements OnInit {
           this.resolutions.push({ label: `Tùy chỉnh (${w} x ${h})`, value: resKey });
         }
 
-        // Cập nhật giá trị vào Form
         this.settingForm.patchValue({
           save_media: data['save_media'] || 'app/media',
           resolution: resKey,
@@ -121,6 +121,8 @@ export class SettingsComponent implements OnInit {
           perf_record_fps: Number(data['perf_record_fps']) || 10.0,
           perf_view_fps: Number(data['perf_view_fps']) || 15.0,
           perf_ai_interval: Number(data['perf_ai_interval']) || 12,
+
+          enable_audio: String(data['enable_audio']).toLowerCase() === 'true'
         });
 
         this.isLoading = false;
@@ -142,10 +144,6 @@ export class SettingsComponent implements OnInit {
     const formVal = this.settingForm.value;
     const [w, h] = formVal.resolution.split('x');
 
-    /**
-     * FIX: TẠO PAYLOAD PHẲNG (FLAT JSON)
-     * Không bọc trong object "settings: {}" để Backend nhận diện được từng Key
-     */
     const payload = {
       save_media: formVal.save_media,
       camera_width: String(w),
@@ -156,18 +154,19 @@ export class SettingsComponent implements OnInit {
       read_end_order: String(formVal.read_end_order),
       perf_record_fps: String(formVal.perf_record_fps),
       perf_view_fps: String(formVal.perf_view_fps),
-      perf_ai_interval: String(formVal.perf_ai_interval)
+      perf_ai_interval: String(formVal.perf_ai_interval),
+      enable_audio: formVal.enable_audio ? "true" : "false"
     };
 
     console.log("🚀 Sending Payload:", payload);
 
     this.settingsService.updateSettings(payload).subscribe({
       next: (res) => {
-        this.messageService.add({ 
-          severity: 'success', 
-          summary: 'Thành công', 
-          detail: 'Đã lưu cấu hình. Hãy khởi động lại dịch vụ Camera để áp dụng.', 
-          life: 4000 
+        this.messageService.add({
+          severity: 'success',
+          summary: 'Thành công',
+          detail: 'Đã lưu cấu hình. Đang khởi động lại dịch vụ...',
+          life: 4000
         });
         this.isLoading = false;
       },

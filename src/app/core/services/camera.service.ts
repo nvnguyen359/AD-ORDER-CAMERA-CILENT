@@ -24,9 +24,9 @@ export class CameraService {
   /**
    * Lấy danh sách tất cả camera
    */
-  getAllCameras(): Observable<ApiResponse<MonitorCamera[]>> {
+  getAllCameras(all = true): Observable<ApiResponse<MonitorCamera[]>> {
     return this.http.get<ApiResponse<MonitorCamera[]>>(`${this.apiUrl}`, {
-      params: new HttpParams().set('skip', 0).set('limit', 100),
+      params: new HttpParams().set('skip', 0).set('limit', 100).set('all', all),
     });
   }
 
@@ -66,7 +66,7 @@ export class CameraService {
    * - Nếu true: Gọi API thật để Server KILL process (Dùng ở trang Setting).
    * - Nếu false (Mặc định): Chỉ trả về success giả để UI hủy widget mà không làm chết cam (Dùng ở Monitor).
    */
-  disconnectCamera(id: number, force: boolean = false): Observable<ApiResponse<any>> {
+  disconnectCamera(id: number, force: boolean = true): Observable<ApiResponse<any>> {
     if (force) {
       // [CASE 1] Admin thao tác ở Setting -> Gửi lệnh Kill thật
       return this.http.post<ApiResponse<any>>(`${this.apiUrl}/${id}/disconnect`, {});
@@ -77,7 +77,7 @@ export class CameraService {
       return of({
         code: 200,
         mes: 'Disconnected UI Only',
-        data: {}
+        data: {},
       });
     }
   }
@@ -87,8 +87,8 @@ export class CameraService {
    * Thêm header 'X-Skip-Loading' để interceptor không hiện spinner làm phiền
    */
   getAIOverlay(id: number): Observable<any> {
-     return this.http.get<any>(`${this.apiUrl}/${id}/ai-overlay`, {
-        headers: new HttpHeaders({ 'X-Skip-Loading': 'true' })
-     });
+    return this.http.get<any>(`${this.apiUrl}/${id}/ai-overlay`, {
+      headers: new HttpHeaders({ 'X-Skip-Loading': 'true' }),
+    });
   }
 }
