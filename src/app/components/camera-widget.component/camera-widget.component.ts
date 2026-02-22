@@ -83,7 +83,7 @@ export class CameraWidgetComponent implements OnInit, OnDestroy {
 
   rawOverlayData = signal<any[]>([]);
 
-  // Độ phân giải (Mặc định HD, sẽ update từ Settings)
+  // Độ phân giải (Mặc định HD, sẽ update từ stream thực tế)
   imgWidth = signal<number>(1280);
   imgHeight = signal<number>(720);
 
@@ -156,13 +156,12 @@ export class CameraWidgetComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.qrCode = this.storageService.getItem('code') ? `${this.storageService.getItem('code')}` : '';
 
-    // 1. [QUAN TRỌNG] Lấy độ phân giải từ Settings ngay lập tức
+    // 1. Lấy độ phân giải từ Settings làm mặc định ban đầu (Dự phòng trước khi stream lên)
     this.settingsService.getSettings().subscribe({
         next: (data: any) => {
             const w = Number(data['camera_width']);
             const h = Number(data['camera_height']);
             if (w && h) {
-                console.log(`[Cam ${this.cameraId}] Apply Resolution: ${w}x${h}`);
                 this.imgWidth.set(w);
                 this.imgHeight.set(h);
             }
@@ -294,13 +293,10 @@ export class CameraWidgetComponent implements OnInit, OnDestroy {
     event?.stopPropagation();
     const currentState = this.recordingState();
 
-    // [FIX] Đã BỎ dòng: if (currentState === 'AUTO') return;
-
     // Nếu đang quay (bao gồm cả MANUAL và AUTO) -> Thực hiện STOP
     if (currentState === 'MANUAL' || currentState === 'AUTO') {
       this.orderCode.set('Đang lưu...');
 
-      // [FIX] Bỏ payload, chỉ truyền cameraId
       this.streamService.stopRecording(this.cameraId).subscribe({
         next: () => {
           this.recordingState.set('IDLE');
@@ -370,16 +366,33 @@ export class CameraWidgetComponent implements OnInit, OnDestroy {
     this.streamService.toggleCamera(this.cameraId, 'disconnect').subscribe();
   }
 
+  // =====================================================================
+  // [CẬP NHẬT MỚI] XỬ LÝ LUỒNG VIDEO
+  // =====================================================================
   onImageLoad(event: Event) {
     this.isLoading.set(false);
+
+    // Tự động nhận diện độ phân giải thực tế của thẻ IMG (stream luồng từ OpenCV về)
+    // Giúp Canvas Map tọa độ AI chính xác 100% với khung hình.
+    const imgTarget = event.target as HTMLImageElement;
+    
+    if (imgTarget && imgTarget.naturalWidth && imgTarget.naturalHeight) {
+      const currentW = this.imgWidth();
+      const currentH = this.imgHeight();
+      
+      // Chỉ cập nhật tín hiệu và render lại Canvas nếu độ phân giải thật sự thay đổi
+      if (currentW !== imgTarget.naturalWidth || currentH !== imgTarget.naturalHeight) {
+        console.log(`[Cam ${this.cameraId}] 📐 Auto-Resizing Canvas to match stream: ${imgTarget.naturalWidth}x${imgTarget.naturalHeight}`);
+        
+        this.imgWidth.set(imgTarget.naturalWidth);
+        this.imgHeight.set(imgTarget.naturalHeight);
+      }
+    }
   }
 
-  // [MỚI] Xử lý khi Stream bị lỗi (Broken pipe, server tắt)
   onImageError(event: Event) {
       if (this.isStreaming()) {
-          console.warn(`[Cam ${this.cameraId}] Stream Error (Broken Pipe).`);
-          // Không tắt hẳn để tránh nháy, nhưng có thể hiện lại loading hoặc retry
-          // Ở đây ta cứ để yên, nếu backend reconnect được thì ảnh sẽ tự load lại do thẻ img src không đổi
+          console.warn(`[Cam ${this.cameraId}] Stream Error (Broken Pipe). Backend reconnecting...`);
       }
   }
 }

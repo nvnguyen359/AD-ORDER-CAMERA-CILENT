@@ -1,0 +1,156 @@
+:host {
+    display: block;
+
+    /* Container chính: Bóng mịn, viền siêu mỏng */
+    .card {
+        background: #ffffff;
+        border-radius: 16px !important;
+        box-shadow: 0 4px 24px -4px rgba(15, 23, 42, 0.05) !important;
+        border: 1px solid #f1f5f9;
+        padding: 1.5rem;
+    }
+
+    ::ng-deep {
+        /* ================= BẢNG DỮ LIỆU (TABLE) CHUẨN SAAS ================= */
+        .p-datatable {
+            .p-datatable-header {
+                background: transparent;
+                border: none;
+                padding: 0 0 1rem 0;
+            }
+
+            /* Header (Tiêu đề cột): Nền xám nhạt, chữ đậm vừa phải */
+            .p-datatable-thead > tr > th {
+                background-color: #f8fafc;
+                color: #475569;
+                font-weight: 600;
+                font-size: 0.85rem;
+                padding: 1rem;
+                border: none;
+                border-bottom: 2px solid #e2e8f0;
+                white-space: nowrap;
+            }
+
+            /* Body (Nội dung) */
+            .p-datatable-tbody > tr {
+                background: #ffffff;
+                transition: background-color 0.2s ease;
+
+                > td {
+                    padding: 1.25rem 1rem;
+                    border: none;
+                    border-bottom: 1px solid #f1f5f9; /* Đường kẻ ngang siêu mỏng */
+                    color: #334155;
+                    font-size: 0.95rem;
+                    vertical-align: middle;
+                }
+
+                /* Hover: Chỉ đổi màu nền nhẹ nhàng, không nảy lên */
+                &:hover {
+                    background-color: #f8fafc !important;
+
+                    /* Tự động làm đậm ID khi trỏ chuột vào dòng */
+                    td:first-child span {
+                        color: var(--primary-color) !important;
+                    }
+                }
+
+                &:last-child > td {
+                    border-bottom: none;
+                }
+            }
+
+            /* Trình phân trang */
+            .p-paginator {
+                background: transparent;
+                border: none;
+                border-top: 1px solid #f1f5f9;
+                padding-top: 1rem;
+                justify-content: flex-end; /* Đẩy phân trang sang phải */
+            }
+        }
+
+        /* ================= TAGS (VIÊN THUỐC) ================= */
+        .p-tag {
+            border-radius: 9999px; /* Bo tròn hoàn toàn thành hình viên thuốc */
+            padding: 0.25rem 0.85rem;
+            font-weight: 600;
+            font-size: 0.75rem;
+            text-transform: capitalize;
+        }
+
+        /* ================= INPUT & DROPDOWN ================= */
+        .p-inputtext, .p-select, .p-password input {
+            border-radius: 8px;
+            border-color: #cbd5e1;
+            box-shadow: none !important;
+            padding: 0.75rem 1rem;
+            transition: border-color 0.2s, box-shadow 0.2s;
+
+            &:enabled:focus, &:enabled:hover {
+                border-color: #3b82f6;
+            }
+
+            /* Viền Glow khi Focus */
+            &:enabled:focus {
+                box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15) !important;
+            }
+        }
+
+        /* Chỉnh lại icon của ô Search */
+        .p-iconfield {
+            .p-inputicon {
+                color: #94a3b8;
+            }
+            .p-inputtext {
+                padding-left: 2.5rem; /* Cách chữ ra để không đè lên icon */
+            }
+        }
+
+        /* ================= DIALOG (MODAL) ĐẲNG CẤP ================= */
+        .p-dialog {
+            border-radius: 16px;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            border: none;
+            overflow: hidden; /* Cắt góc viền */
+
+            .p-dialog-header {
+                padding: 1.5rem 1.5rem 1rem 1.5rem;
+                border-bottom: 1px solid #f1f5f9;
+                background: #ffffff;
+
+                .p-dialog-title {
+                    font-weight: 800;
+                    color: #0f172a;
+                    font-size: 1.25rem;
+                }
+            }
+
+            .p-dialog-content {
+                padding: 1.5rem;
+                background: #ffffff;
+            }
+
+            .p-dialog-footer {
+                padding: 1.25rem 1.5rem;
+                border-top: 1px solid #f1f5f9;
+                background: #f8fafc; /* Nền xám nhạt ở footer phân tách rõ ràng */
+                gap: 0.75rem;
+            }
+        }
+
+        /* ================= BUTTONS ================= */
+        .p-button {
+            border-radius: 8px;
+            font-weight: 600;
+
+            &.p-button-text {
+                color: #64748b;
+                &:hover {
+                    background: #f1f5f9;
+                    color: #0f172a;
+                }
+            }
+        }
+    }
+}

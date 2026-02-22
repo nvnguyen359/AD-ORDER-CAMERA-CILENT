@@ -1,0 +1,90 @@
+:host {
+    display: block;
+    width: 100%;
+}
+
+.system-control-widget {
+    background: #ffffff;
+    border-radius: 16px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+    border: 1px solid #f1f5f9;
+    padding: 1.25rem;
+    width: 100%;
+
+    /* --- CÁC STYLE KHI Ở CHẾ ĐỘ RÚT GỌN (COMPACT) --- */
+    &.compact {
+        box-shadow: none;       
+        border: none;           
+        padding: 0;             
+        background: transparent;
+
+        .control-item {
+            background-color: transparent; 
+            
+            .icon-wrapper {
+                width: 32px;
+                height: 32px;
+                transition: all 0.2s ease;
+
+                /* Hiệu ứng hover cho icon khi có thể click */
+                &:hover {
+                    transform: scale(1.1);
+                    filter: brightness(0.95);
+                }
+                
+                /* Hiệu ứng khi nhấn xuống */
+                &:active {
+                    transform: scale(0.95);
+                }
+            }
+
+            &:hover {
+                background-color: #f8fafc; 
+                box-shadow: none;
+                transform: none; 
+            }
+        }
+    }
+
+    /* --- GIAO DIỆN ĐẦY ĐỦ BÌNH THƯỜNG --- */
+    .widget-header {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        margin-bottom: 1.25rem;
+        padding-bottom: 0.75rem;
+        border-bottom: 1px dashed #e2e8f0;
+    }
+
+    .control-item {
+        background-color: #f8fafc;
+        border: 1px solid transparent;
+        transition: all 0.2s ease-in-out;
+
+        .icon-wrapper {
+            width: 42px;
+            height: 42px;
+            transition: all 0.2s ease-in-out;
+        }
+
+        /* Chỉ áp dụng Hover effect của Card khi KHÔNG ở chế độ compact */
+        @at-root .system-control-widget:not(.compact) & {
+            &:hover {
+                background-color: #ffffff;
+                border-color: #e2e8f0;
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+                transform: translateY(-2px);
+
+                .icon-wrapper.bg-blue-50 {
+                    background-color: #eff6ff !important;
+                    box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+                }
+
+                .icon-wrapper.bg-orange-50 {
+                    background-color: #fff7ed !important;
+                    box-shadow: 0 0 0 4px rgba(249, 115, 22, 0.1);
+                }
+            }
+        }
+    }
+}

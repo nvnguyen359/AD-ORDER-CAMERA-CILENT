@@ -1,0 +1,136 @@
+<div class="card p-4 shadow-2 border-round-xl bg-white m-3">
+    <p-toast></p-toast>
+    <p-confirmDialog></p-confirmDialog>
+
+    <div class="flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+        <div>
+            <h2 class="m-0 text-800 font-bold"><i class="pi pi-users mr-2"></i>Quản lý Người dùng</h2>
+            <span class="text-500 text-sm">Thêm mới, phân quyền và khóa tài khoản</span>
+        </div>
+
+        <div class="flex flex-wrap gap-2">
+            <p-iconField iconPosition="left">
+                <p-inputIcon styleClass="pi pi-search"></p-inputIcon>
+                <input type="text" pInputText placeholder="Tìm theo tên/tài khoản..."
+                       [(ngModel)]="searchKeyword" (keyup.enter)="onSearch()" class="w-15rem" />
+            </p-iconField>
+
+            <p-select [options]="filterRoleOptions" [(ngModel)]="selectedFilterRole"
+                      optionLabel="label" optionValue="value"
+                      placeholder="Chọn chức vụ" (onChange)="onSearch()">
+            </p-select>
+
+            <p-button *ngIf="isAdmin()" label="Thêm người dùng" icon="pi pi-plus" severity="primary" (onClick)="openNew()"></p-button>
+        </div>
+    </div>
+
+    <p-table
+        [value]="users()"
+        [lazy]="true"
+        (onLazyLoad)="loadUsers($event)"
+        dataKey="id"
+        [paginator]="true"
+        [rows]="10"
+        [totalRecords]="totalRecords()"
+        [loading]="loading()"
+        [rowHover]="true">
+
+        <ng-template pTemplate="header">
+            <tr>
+                <th style="width: 5%">ID</th>
+                <th style="width: 20%">Tài khoản</th>
+                <th style="width: 25%">Họ và tên</th>
+                <th style="width: 15%">Chức vụ</th>
+                <th style="width: 15%">Trạng thái</th>
+                <th *ngIf="isAdmin()" style="width: 20%" class="text-center">Thao tác</th>
+            </tr>
+        </ng-template>
+
+        <ng-template pTemplate="body" let-user>
+            <tr>
+                <td><span class="text-500 font-bold">#{{user.id}}</span></td>
+                <td><span class="font-bold text-primary">{{user.username}}</span></td>
+                <td>{{user.full_name || '---'}}</td>
+                <td>
+                    <p-tag [value]="getRoleLabel(user.role)" [severity]="getSeverity(user.role)"></p-tag>
+                </td>
+                <td>
+                    <p-tag [value]="user.is_active === 1 ? 'Hoạt động' : 'Đã khóa'"
+                           [severity]="user.is_active === 1 ? 'success' : 'danger'">
+                    </p-tag>
+                </td>
+
+                <td *ngIf="isAdmin()" class="text-center">
+                    <p-button
+                        icon="pi pi-pencil"
+                        severity="info"
+                        [text]="true" [rounded]="true"
+                        pTooltip="Chỉnh sửa"
+                        (onClick)="openEdit(user)">
+                    </p-button>
+
+                    <p-button
+                        [icon]="user.is_active === 1 ? 'pi pi-lock' : 'pi pi-unlock'"
+                        [severity]="user.is_active === 1 ? 'danger' : 'success'"
+                        [text]="true" [rounded]="true"
+                        [pTooltip]="user.is_active === 1 ? 'Khóa tài khoản' : 'Mở khóa'"
+                        (onClick)="toggleStatus(user)">
+                    </p-button>
+                </td>
+            </tr>
+        </ng-template>
+
+        <ng-template pTemplate="emptymessage">
+            <tr>
+                <td colspan="6" class="text-center p-4">Không tìm thấy người dùng nào.</td>
+            </tr>
+        </ng-template>
+    </p-table>
+</div>
+
+<p-dialog [(visible)]="userDialog" [style]="{width: '450px'}"
+          [header]="isEditMode() ? 'Sửa Thông Tin' : 'Tạo Tài Khoản Mới'"
+          [modal]="true" styleClass="p-fluid" (onHide)="hideDialog()">
+
+    <ng-template pTemplate="content">
+        <form [formGroup]="userForm" class="flex flex-column gap-4 pt-3">
+
+            <div class="field-wrapper">
+                <p-floatlabel variant="on">
+                    <input type="text" pInputText id="username" formControlName="username" class="w-full" autocomplete="off" />
+                    <label for="username">Tên đăng nhập <span *ngIf="!isEditMode()" class="text-red-500">*</span></label>
+                </p-floatlabel>
+            </div>
+
+            <div class="field-wrapper">
+                <p-floatlabel variant="on">
+                    <input type="password" pInputText id="password" formControlName="password" class="w-full" autocomplete="off" />
+                    <label for="password">
+                        {{ isEditMode() ? 'Mật khẩu mới (Bỏ trống nếu giữ nguyên)' : 'Mật khẩu' }}
+                        <span *ngIf="!isEditMode()" class="text-red-500">*</span>
+                    </label>
+                </p-floatlabel>
+            </div>
+
+            <div class="field-wrapper">
+                <p-floatlabel variant="on">
+                    <input type="text" pInputText id="full_name" formControlName="full_name" class="w-full" autocomplete="off" />
+                    <label for="full_name">Họ và tên</label>
+                </p-floatlabel>
+            </div>
+
+            <div class="field-wrapper">
+                <p-floatlabel variant="on">
+                    <p-select id="role" [options]="roleOptions" formControlName="role" appendTo="body" optionLabel="label" optionValue="value" styleClass="w-full"></p-select>
+                    <label for="role">Chức vụ <span class="text-red-500">*</span></label>
+                </p-floatlabel>
+            </div>
+
+        </form>
+    </ng-template>
+
+    <ng-template pTemplate="footer">
+        <p-button label="Hủy" icon="pi pi-times" [text]="true" severity="secondary" (onClick)="hideDialog()"></p-button>
+        <p-button [label]="isEditMode() ? 'Cập nhật' : 'Lưu tài khoản'" icon="pi pi-check" [loading]="isSaving()" (onClick)="saveUser()"></p-button>
+    </ng-template>
+</p-dialog>

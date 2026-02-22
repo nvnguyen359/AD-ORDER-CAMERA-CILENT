@@ -72,11 +72,11 @@ export class BoxSearchComponent {
     const query = event.query;
     this.searchKeyword.set(query);
 
+    // AutoComplete vẫn dùng tìm kiếm tương đối (exact_match mặc định false)
     this.orderService.getOrders({ page: 0, pageSize: 50, code: query }).subscribe({
       next: (res) => {
-        // [FIX] Ép kiểu any để tránh lỗi TS "Property items does not exist on type never"
         const responseData: any = res.data || {};
-        let rawList: any[] = []; // [FIX] Khai báo rõ kiểu mảng
+        let rawList: any[] = [];
 
         if (Array.isArray(responseData)) {
             rawList = responseData;
@@ -136,6 +136,7 @@ export class BoxSearchComponent {
     const order = event.value;
     this.selectedCode = order.code;
     this.header = `Kiểm Tra Đơn Hàng ${order.code}`;
+    // Khi click chọn cụ thể -> Tìm chính xác
     this.checkAndOpenOrder(order.code);
   }
 
@@ -145,6 +146,7 @@ export class BoxSearchComponent {
     this.selectedCode = code;
     this.header = `Kiểm Tra Đơn Hàng ${this.selectedCode}`;
     this.searchKeyword.set(code);
+    // Quét QR -> Luôn tìm chính xác
     this.checkAndOpenOrder(code);
   }
 
@@ -154,9 +156,14 @@ export class BoxSearchComponent {
     this.header = `Kiểm Tra Đơn Hàng ${code}`;
 
     // Gọi API check xem có dữ liệu không
-    this.orderService.getOrders({ code: code, page: 0, pageSize: 1 }).subscribe({
+    // [UPDATE] Thêm exact_match: true để tìm chính xác mã
+    this.orderService.getOrders({
+        code: code,
+        page: 0,
+        pageSize: 1,
+        exact_match: true
+    }).subscribe({
       next: (res) => {
-        // [FIX] Ép kiểu any và any[] để tránh lỗi TS
         const responseData: any = res.data || {};
         let items: any[] = [];
 

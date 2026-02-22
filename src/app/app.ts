@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, ViewChild, signal } from '@angular/core';
+import { Component, ViewChild, signal, OnInit, OnDestroy, inject } from '@angular/core'; // [UPDATE] Thêm OnInit, OnDestroy, inject
 import { Router, RouterOutlet, RouterModule } from '@angular/router';
 // [1] Import đầy đủ animation functions
 import { trigger, transition, style, animate, query, stagger, animateChild, group } from '@angular/animations';
@@ -14,9 +14,11 @@ import { MessageService } from 'primeng/api';
 
 import { menuItems } from './Menu';
 import { AuthService } from './core/services/auth.service';
+import { SettingsService } from './core/services/settings.service'; // [UPDATE] Import Service
 import { BoxSearchComponent } from './components/box-search.component/box-search.component';
 import { OrderService } from './core/services/order.service';
 import { SystemMonitorComponent } from './components/system-monitor.component/system-monitor.component';
+import { SystemControlComponent } from './components/system-control.component/system-control.component';
 
 @Component({
   selector: 'app-root',
@@ -31,7 +33,9 @@ import { SystemMonitorComponent } from './components/system-monitor.component/sy
     DrawerModule,
     ButtonModule,
     ToastModule,
-    BoxSearchComponent,SystemMonitorComponent
+    BoxSearchComponent,
+    SystemMonitorComponent,
+    SystemControlComponent
   ],
   templateUrl: './app.html',
   styleUrls: ['./app.scss'],
@@ -40,15 +44,10 @@ import { SystemMonitorComponent } from './components/system-monitor.component/sy
   animations: [
     trigger('menuAnimation', [
       transition(':enter', [
-        // 1. Trạng thái ban đầu của cả khối: Ẩn, tụt xuống 15px, thu nhỏ nhẹ
         style({ opacity: 0, transform: 'translateY(15px) scale(0.95)' }),
-
-        // 2. Chạy Animation cho cả khối (Nảy nhẹ: cubic-bezier)
         group([
           animate('250ms cubic-bezier(0.34, 1.56, 0.64, 1)',
             style({ opacity: 1, transform: 'translateY(0) scale(1)' })),
-
-          // 3. Tìm các item con (.popup-item) để chạy hiệu ứng xuất hiện lần lượt
           query('.popup-item', [
             style({ opacity: 0, transform: 'translateX(-10px)' }),
             stagger(50, [
@@ -58,21 +57,25 @@ import { SystemMonitorComponent } from './components/system-monitor.component/sy
           ], { optional: true })
         ])
       ]),
-
       transition(':leave', [
-        // Khi đóng: Biến mất nhanh và mượt (ease-in)
         animate('200ms cubic-bezier(0.4, 0.0, 0.2, 1)',
           style({ opacity: 0, transform: 'translateY(10px) scale(0.95)' }))
       ])
     ])
   ]
 })
-export class App {
+export class App implements OnInit, OnDestroy {
   protected readonly title = signal('AD-ORDER-CAMERA-CLIENT');
   visible = false;
   isSpeedDialOpen = false;
 
   menuItems = menuItems;
+
+  // [LOGIC MỚI] Xử lý thông báo hết giờ
+  private settingsService = inject(SettingsService);
+  isOverTime = signal(false); // Signal điều khiển hiển thị banner
+  workEndTimeDisplay = signal(''); // Hiển thị giờ nghỉ lên UI
+  private timeCheckInterval: any;
 
   @ViewChild(BoxSearchComponent) boxSearch!: BoxSearchComponent;
 
@@ -82,6 +85,18 @@ export class App {
     private messageService: MessageService,
     private orderService: OrderService
   ) {}
+
+  // [INIT] Khởi tạo check giờ
+  ngOnInit() {
+    this.checkWorkTime();
+  }
+
+  // [DESTROY] Dọn dẹp interval khi component hủy
+  ngOnDestroy() {
+    if (this.timeCheckInterval) {
+      clearInterval(this.timeCheckInterval);
+    }
+  }
 
   private get moreIndex() {
     return this.menuItems.findIndex(item => item.label === 'More');
@@ -121,7 +136,6 @@ export class App {
   }
 
   handleSpeedDialClick(item: any) {
-    // Đóng menu chậm lại 1 chút để người dùng kịp thấy hiệu ứng click (ripple)
     setTimeout(() => {
         this.isSpeedDialOpen = false;
     }, 150);
@@ -140,6 +154,47 @@ export class App {
       if (this.boxSearch) {
         this.boxSearch.showQrDialog = true;
       }
+    }
+  }
+
+  // [HÀM MỚI] Kiểm tra giờ làm việc từ Settings
+  checkWorkTime() {
+    this.settingsService.getSettings().subscribe({
+      next: (data: any) => {
+        const endTimeStr = data['work_end_time']; // Ví dụ "17:30"
+
+        if (endTimeStr) {
+          this.workEndTimeDisplay.set(endTimeStr);
+
+          // 1. Kiểm tra ngay lập tức
+          this.compareTime(endTimeStr);
+
+          // 2. Tạo vòng lặp kiểm tra mỗi 60 giây
+          this.timeCheckInterval = setInterval(() => {
+            this.compareTime(endTimeStr);
+          }, 5000);
+        }
+      },
+      error: () => console.warn('Không tải được cấu hình giờ làm việc')
+    });
+  }
+
+  // [HÀM MỚI] So sánh thời gian
+  compareTime(endTimeStr: string) {
+    if (!endTimeStr) return;
+
+    const now = new Date();
+    const [hours, minutes] = endTimeStr.split(':').map(Number);
+
+    // Tạo đối tượng Date cho giờ nghỉ hôm nay
+    const limit = new Date();
+    limit.setHours(hours, minutes, 0, 0);
+
+    // Nếu hiện tại >= giờ nghỉ -> Bật thông báo
+    if (now >= limit) {
+      this.isOverTime.set(true);
+    } else {
+      this.isOverTime.set(false);
     }
   }
 }

@@ -13,21 +13,32 @@ export class SocketService {
   public isConnected = signal<boolean>(false);
 
   constructor() {
-    // [FIX] Tự động xác định URL Backend dựa trên địa chỉ trình duyệt đang truy cập
-    let socketUrl = environment.apiUrl;
+    let socketUrl = environment.apiUrl; // VD: 'http://localhost:8000/api' hoặc '/api'
 
-    // Nếu không cấu hình cứng apiUrl trong environment, tự động lấy IP hiện tại + Port 8000
+    // Xóa bỏ đuôi /api (nếu có) để Socket.IO không hiểu nhầm là Namespace
+    if (socketUrl && socketUrl.endsWith('/api')) {
+      socketUrl = socketUrl.substring(0, socketUrl.length - 4);
+    }
+
+    // Nếu socketUrl bị rỗng (ví dụ apiUrl gốc chỉ là '/api'),
+    // tự động cấu trúc lại URL từ trình duyệt
     if (!socketUrl) {
       const protocol = window.location.protocol; // 'http:' hoặc 'https:'
-      const host = window.location.hostname;     // Lấy IP (vd: 192.168.1.50) hoặc domain
-      socketUrl = `${protocol}//${host}:8000`;   // Ghép thành: http://192.168.1.50:8000
+      const host = window.location.hostname;     // Lấy IP (vd: 192.168.1.50)
+      const port = window.location.port ? `:${window.location.port}` : '';
+
+      // Nếu đang chạy dev (Frontend port 4200), ép trỏ về backend 8000.
+      // Nếu ở production (Port rỗng, 80 hoặc 443), giữ nguyên port đó.
+      const finalPort = port === ':4200' ? ':8000' : port;
+
+      socketUrl = `${protocol}//${host}${finalPort}`;
     }
 
     console.log('🔌 [Socket] Target URL:', socketUrl);
 
     this.socket = io(socketUrl, {
       path: '/socket.io',
-      transports: ['websocket'], // Bắt buộc dùng websocket để giảm độ trễ cho Camera
+      transports: ['websocket'], // Bắt buộc dùng websocket để giảm độ trễ
       reconnectionAttempts: 10,
       reconnectionDelay: 3000
     });
@@ -74,4 +85,4 @@ export class SocketService {
   emit(eventName: string, data: any) {
     this.socket.emit(eventName, data);
   }
-} 
+}

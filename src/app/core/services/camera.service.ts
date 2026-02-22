@@ -22,6 +22,14 @@ export class CameraService {
   constructor(private http: HttpClient) {}
 
   /**
+   * Tạo mới Camera
+   * API: POST /cameras
+   */
+  createCamera(data: any): Observable<ApiResponse<MonitorCamera>> {
+    return this.http.post<ApiResponse<MonitorCamera>>(`${this.apiUrl}`, data);
+  }
+
+  /**
    * Lấy danh sách tất cả camera
    */
   getAllCameras(all = true): Observable<ApiResponse<MonitorCamera[]>> {
@@ -43,7 +51,7 @@ export class CameraService {
   }
 
   /**
-   * Cập nhật thông tin camera (Ví dụ: Đổi tên hiển thị)
+   * Cập nhật thông tin camera (Ví dụ: Đổi tên hiển thị, URL)
    * API: PATCH /cameras/{id}
    */
   updateCamera(id: number, data: Partial<MonitorCamera>): Observable<ApiResponse<MonitorCamera>> {
@@ -59,20 +67,12 @@ export class CameraService {
   }
 
   /**
-   * [LOGIC MỚI - CHỈ ADMIN MỚI KILL ĐƯỢC]
    * Ngắt kết nối Camera.
-   * * @param id ID của Camera
-   * @param force
-   * - Nếu true: Gọi API thật để Server KILL process (Dùng ở trang Setting).
-   * - Nếu false (Mặc định): Chỉ trả về success giả để UI hủy widget mà không làm chết cam (Dùng ở Monitor).
    */
   disconnectCamera(id: number, force: boolean = true): Observable<ApiResponse<any>> {
     if (force) {
-      // [CASE 1] Admin thao tác ở Setting -> Gửi lệnh Kill thật
       return this.http.post<ApiResponse<any>>(`${this.apiUrl}/${id}/disconnect`, {});
     } else {
-      // [CASE 2] Monitor chuyển cam / hủy widget -> Fake Success
-      // Giúp luồng Camera ở Backend vẫn sống, không bị gián đoạn ghi hình
       console.log(`[Client] Disconnect Cam ${id} (UI Only - Process Kept Alive)`);
       return of({
         code: 200,
@@ -84,11 +84,14 @@ export class CameraService {
 
   /**
    * API lấy dữ liệu AI Overlay (Polling)
-   * Thêm header 'X-Skip-Loading' để interceptor không hiện spinner làm phiền
    */
   getAIOverlay(id: number): Observable<any> {
     return this.http.get<any>(`${this.apiUrl}/${id}/ai-overlay`, {
       headers: new HttpHeaders({ 'X-Skip-Loading': 'true' }),
     });
+  }
+
+  deleteCamera(id: number): Observable<ApiResponse<any>> {
+    return this.http.delete<ApiResponse<any>>(`${this.apiUrl}/${id}`);
   }
 }

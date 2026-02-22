@@ -1,0 +1,66 @@
+<p-toast></p-toast>
+<p-confirmDialog></p-confirmDialog>
+
+<div class="system-control-widget" [ngClass]="{'compact': compactMode()}">
+    
+    <div class="widget-header" *ngIf="!compactMode()">
+        <i class="pi pi-server text-xl text-600"></i>
+        <span class="font-bold text-700 text-lg">System Controls</span>
+    </div>
+
+    <div class="widget-body flex flex-column" [ngClass]="compactMode() ? 'gap-1' : 'gap-3'">
+        
+        <div class="control-item flex align-items-center justify-content-between transition-all border-round-xl"
+             [ngClass]="compactMode() ? 'p-2' : 'p-3'">
+            <div class="flex align-items-center" [ngClass]="compactMode() ? 'gap-2' : 'gap-3'">
+                
+                <div class="icon-wrapper bg-blue-50 text-blue-500 border-circle flex align-items-center justify-content-center"
+                     (click)="compactMode() ? toggleHotspotManual() : null"
+                     [ngStyle]="{'cursor': compactMode() ? 'pointer' : 'default'}"
+                     [title]="compactMode() ? 'Nhấn để Bật/Tắt Hotspot' : ''">
+                    <i class="pi pi-wifi" [class.pi-spin]="isLoading()" [ngClass]="compactMode() ? 'text-base' : 'text-xl'"></i>
+                </div>
+                
+                <div class="flex flex-column">
+                    <span class="font-bold text-800" [ngClass]="{'text-sm': compactMode()}">Wi-Fi Hotspot</span>
+                    <small class="text-500" *ngIf="!compactMode()">Phát Wi-Fi thiết lập</small>
+                </div>
+            </div>
+            
+            <p-toggleSwitch
+                [ngModel]="isHotspotActive()"
+                (onChange)="onHotspotToggle($event)"
+                [disabled]="isLoading()"
+                [style]="compactMode() ? {'transform': 'scale(0.8)', 'transform-origin': 'right center'} : {}">
+            </p-toggleSwitch>
+        </div>
+
+        <div class="control-item flex align-items-center justify-content-between transition-all border-round-xl"
+             [ngClass]="compactMode() ? 'p-2' : 'p-3'">
+            <div class="flex align-items-center" [ngClass]="compactMode() ? 'gap-2' : 'gap-3'">
+                
+                <div class="icon-wrapper bg-orange-50 text-orange-500 border-circle flex align-items-center justify-content-center"
+                     (click)="compactMode() ? confirmReboot() : null"
+                     [ngStyle]="{'cursor': compactMode() ? 'pointer' : 'default'}"
+                     [title]="compactMode() ? 'Nhấn để Khởi động lại' : ''">
+                    <i class="pi pi-refresh" [ngClass]="compactMode() ? 'text-base' : 'text-xl'"></i>
+                </div>
+                
+                <div class="flex flex-column">
+                    <span class="font-bold text-800" [ngClass]="{'text-sm': compactMode()}">Khởi động lại</span>
+                    <small class="text-500" *ngIf="!compactMode()">Restart thiết bị Op3</small>
+                </div>
+            </div>
+            
+            <p-button
+                icon="pi pi-power-off"
+                severity="danger"
+                [rounded]="true"
+                [outlined]="true"
+                [size]="compactMode() ? 'small' : undefined"
+                (onClick)="confirmReboot()">
+            </p-button>
+        </div>
+        
+    </div>
+</div>

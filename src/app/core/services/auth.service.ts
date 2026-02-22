@@ -29,6 +29,7 @@ export class AuthService {
 
   constructor() {
     console.log('Auth Status:', this.isAuthenticated() ? 'Logged In' : 'Guest');
+    console.log(this.apiUrl)
   }
 
   // --- 1. ĐĂNG KÝ ---
@@ -62,7 +63,7 @@ export class AuthService {
     formData.append('username', form.username);
     formData.append('password', form.password);
 
-    return this.http.post<LoginResponse>(`${this.apiUrl}/api/login`, formData).pipe(
+    return this.http.post<LoginResponse>(`${this.apiUrl}/login`, formData).pipe(
       tap((response) => {
         // 1. Lưu Token
         this.storageService.setItem(ACCESS_TOKEN_KEY, response.access_token);

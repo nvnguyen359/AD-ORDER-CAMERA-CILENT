@@ -23,7 +23,7 @@ export class OrderService extends BaseService<Order> {
     // 1. Clone params để xử lý, tránh ảnh hưởng object gốc bên component
     const queryParams: any = { ...params };
 
-    // --- A. XỬ LÝ NGÀY THÁNG ---
+    // --- A. XỬ LÝ NGÀY THÁNG (RANGE) ---
     // Backend cần: YYYY-MM-DD HH:mm:ss
 
     // 1. Xử lý Start Date
@@ -42,7 +42,23 @@ export class OrderService extends BaseService<Order> {
       queryParams.end_date = this.formatDateForBackend(queryParams.end_date, true);
     }
 
-    // --- B. XỬ LÝ PHÂN TRANG & SORT ---
+    // --- B. XỬ LÝ FILTER NÂNG CAO (THÁNG, QUÝ, NĂM, EXACT MATCH) ---
+    // Đảm bảo dữ liệu gửi lên là số (number)
+    if (queryParams.month) {
+      queryParams.month = Number(queryParams.month);
+    }
+    if (queryParams.quarter) {
+      queryParams.quarter = Number(queryParams.quarter);
+    }
+    if (queryParams.year) {
+      queryParams.year = Number(queryParams.year);
+    }
+    // Chế độ tìm kiếm chính xác (dùng cho QR Scan)
+    if (queryParams.exact_match !== undefined) {
+      queryParams.exact_match = queryParams.exact_match;
+    }
+
+    // --- C. XỬ LÝ PHÂN TRANG & SORT ---
 
     // Map 'rows' -> 'page_size'
     const pageSize = queryParams.rows || queryParams.pageSize || 10;
@@ -69,7 +85,7 @@ export class OrderService extends BaseService<Order> {
       queryParams.sort_dir = 'desc';
     }
 
-    // --- C. CLEANUP (XÓA DỮ LIỆU RÁC CỦA PRIMENG) ---
+    // --- D. CLEANUP (XÓA DỮ LIỆU RÁC CỦA PRIMENG) ---
     const keysToRemove = [
       'rows',
       'pageSize',
@@ -84,14 +100,13 @@ export class OrderService extends BaseService<Order> {
 
     keysToRemove.forEach((key) => delete queryParams[key]);
 
-    // Xóa các giá trị null/undefined/rỗng
+    // Xóa các giá trị null/undefined/rỗng (trừ số 0)
     Object.keys(queryParams).forEach((key) => {
-      if (queryParams[key] === null || queryParams[key] === undefined || queryParams[key] === '') {
+      const val = queryParams[key];
+      if (val === null || val === undefined || val === '') {
         delete queryParams[key];
       }
     });
-
-    // console.log('API Request Params:', queryParams);
 
     return this.findAll(queryParams) as Observable<OrderResponse>;
   }
@@ -129,14 +144,11 @@ export class OrderService extends BaseService<Order> {
 
   // Xóa tất cả đơn hàng
   deleteAllOrders(): Observable<any> {
-    // Gọi API: DELETE /api/v1/orders
-    // Lưu ý: Backend router đang định nghĩa @router.delete("") tại prefix /orders
     return this.http.delete(this.apiUrl);
   }
 
   // Lấy danh sách gia đình đơn hàng (Cha - Con - Chính nó)
   getOrderFamily(code: string): Observable<any> {
-    // Gọi API: GET /api/v1/orders/family?code=...
     return this.http.get<any>(`${this.apiUrl}/family`, { params: { code } });
   }
 }

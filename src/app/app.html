@@ -4,7 +4,8 @@
   <header class="header-desktop shadow-1">
     <div class="container">
       <div class="header-left">
-        <p-button icon="pi pi-bars" (click)="visible = true" [text]="true"  styleClass="hamburger-btn" class="ham"></p-button>
+        <p-button icon="pi pi-bars" (click)="visible = true" [text]="true" styleClass="hamburger-btn"
+          class="ham"></p-button>
         <div class="logo-text"><span>MyApp</span></div>
       </div>
       <div class="header-search">
@@ -13,28 +14,38 @@
     </div>
   </header>
 
+  <div *ngIf="isOverTime()" class="overtime-banner shadow-2">
+    <div class="flex align-items-center justify-content-center gap-2">
+      <i class="pi pi-clock text-2xl animation-shake"></i>
+      <span class="font-bold text-lg">ĐÃ HẾT GIỜ LÀM VIỆC ({{ workEndTimeDisplay() }})</span>
+    </div>
+    <span class="text-sm opacity-90">Vui lòng hoàn tất đơn hàng và nghỉ ngơi!</span>
+  </div>
+
   <p-drawer [(visible)]="visible" header="Menu">
-      <div class="drawer-content">
-          <ul class="drawer-list">
-              <li *ngFor="let item of drawerMenuItems">
-                  <ng-container *ngIf="item.routerLink; else actionItem">
-                      <a [routerLink]="item.routerLink" class="drawer-link cursor-pointer"
-                         [class.active-route]="router.isActive(item.routerLink, false)"
-                         (click)="visible = false">
-                          <i [class]="item.icon"></i>
-                          <span>{{ item.label }}</span>
-                      </a>
-                  </ng-container>
-                  <ng-template #actionItem>
-                      <a class="drawer-link cursor-pointer"
-                         (click)="item.label === 'Logout' ? authService.logout() : handleMenuClick($event, item)">
-                          <i [class]="item.icon"></i>
-                          <span>{{ item.label }}</span>
-                      </a>
-                  </ng-template>
-              </li>
-          </ul>
-      </div>
+    <div class="drawer-content">
+      <ul class="drawer-list">
+        <li *ngFor="let item of drawerMenuItems">
+          <ng-container *ngIf="item.routerLink; else actionItem">
+            <a [routerLink]="item.routerLink" class="drawer-link cursor-pointer"
+              [class.active-route]="router.isActive(item.routerLink, false)" (click)="visible = false">
+              <i [class]="item.icon"></i>
+              <span>{{ item.label }}</span>
+            </a>
+          </ng-container>
+          <ng-template #actionItem>
+            <a class="drawer-link cursor-pointer"
+              (click)="item.label === 'Logout' ? authService.logout() : handleMenuClick($event, item)">
+              <i [class]="item.icon"></i>
+              <span>{{ item.label }}</span>
+            </a>
+          </ng-template>
+        </li>
+        <li>
+          <app-system-control></app-system-control>
+        </li>
+      </ul>
+    </div>
   </p-drawer>
 
   <main class="main-content">
@@ -46,40 +57,36 @@
   <nav class="mobile-bottom-nav">
     <div class="nav-container w-full h-full flex justify-content-around align-items-center relative">
 
-        <ng-container *ngFor="let item of mobilePrimaryItems">
-            <a *ngIf="item.routerLink" [routerLink]="item.routerLink"
-               routerLinkActive="active" [routerLinkActiveOptions]="{exact: true}"
-               class="nav-item cursor-pointer">
-               <i [class]="item.icon"></i>
-               <span class="nav-label">{{ item.label }}</span>
-            </a>
-            <a *ngIf="!item.routerLink" class="nav-item cursor-pointer nav-item-qr"
-               (click)="handleMenuClick($event, item)">
-               <i [class]="item.icon"></i>
-            </a>
-        </ng-container>
+      <ng-container *ngFor="let item of mobilePrimaryItems">
+        <a *ngIf="item.routerLink" [routerLink]="item.routerLink" routerLinkActive="active"
+          [routerLinkActiveOptions]="{exact: true}" class="nav-item cursor-pointer">
+          <i [class]="item.icon"></i>
+          <span class="nav-label">{{ item.label }}</span>
+        </a>
+        <a *ngIf="!item.routerLink" class="nav-item cursor-pointer nav-item-qr" (click)="handleMenuClick($event, item)">
+          <i [class]="item.icon"></i>
+        </a>
+      </ng-container>
 
-        <div class="nav-item more-container" *ngIf="speedDialItems.length > 0">
+      <div class="nav-item more-container" *ngIf="speedDialItems.length > 0">
 
-            <div class="menu-popup-card shadow-4" *ngIf="isSpeedDialOpen" @menuAnimation>
+        <div class="menu-popup-card shadow-4" *ngIf="isSpeedDialOpen" @menuAnimation>
 
-                <div *ngFor="let item of speedDialItems; let last = last"
-                     class="popup-item cursor-pointer"
-                     [class.border-bottom]="!last"
-                     (click)="handleSpeedDialClick(item)">
-                    <i [class]="item.icon" class="popup-icon"></i>
-                    <span class="popup-label">{{ item.label }}</span>
-                </div>
-
-                <div class="popup-arrow"></div>
-            </div>
-
-            <div class="more-btn" (click)="toggleSpeedDial()" [class.active-state]="isSpeedDialOpen">
-                <i class="pi" [ngClass]="isSpeedDialOpen ? 'pi-times' : 'pi-bars'"></i>
-                <span class="nav-label">More</span>
-            </div>
-
+          <div *ngFor="let item of speedDialItems; let last = last" class="popup-item cursor-pointer"
+            [class.border-bottom]="!last" (click)="handleSpeedDialClick(item)">
+            <i [class]="item.icon" class="popup-icon"></i>
+            <span class="popup-label">{{ item.label }}</span>
+          </div>
+          <app-system-control [compactMode]="true"></app-system-control>
+          <div class="popup-arrow"></div>
         </div>
+
+        <div class="more-btn" (click)="toggleSpeedDial()" [class.active-state]="isSpeedDialOpen">
+          <i class="pi" [ngClass]="isSpeedDialOpen ? 'pi-times' : 'pi-bars'"></i>
+          <span class="nav-label">More</span>
+        </div>
+
+      </div>
 
     </div>
   </nav>
